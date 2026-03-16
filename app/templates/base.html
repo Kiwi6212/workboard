@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WorkBoard{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={darkMode:'class'}</script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .sidebar-link.active { background: rgba(59,130,246,.15); color: #3b82f6; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen flex">
+    <!-- Sidebar -->
+    <nav class="w-56 bg-gray-900 border-r border-gray-800 flex flex-col fixed h-full">
+        <div class="p-4 text-xl font-bold tracking-tight border-b border-gray-800">WorkBoard</div>
+        <div class="flex-1 p-2 space-y-1">
+            <a href="/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if request.path == '/' %}active{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
+                Dashboard
+            </a>
+            <a href="/planning/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if '/planning' in request.path %}active{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Planning
+            </a>
+            <a href="/tasks/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if '/tasks' in request.path %}active{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                Tâches
+            </a>
+            <a href="/docs/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if '/docs' in request.path %}active{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                Documents
+            </a>
+            <a href="/notes/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if '/notes' in request.path %}active{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Notes
+            </a>
+            <a href="/goals/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if '/goals' in request.path %}active{% endif %}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                Objectifs
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="ml-56 flex-1 p-8 overflow-y-auto">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

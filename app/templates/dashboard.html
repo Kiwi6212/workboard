@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — WorkBoard{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Dashboard</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Task summary -->
+    <div class="bg-gray-900 rounded-xl p-5 border border-gray-800">
+        <h2 class="text-sm font-medium text-gray-400 mb-3">Tâches</h2>
+        <div class="flex justify-between text-center">
+            <div>
+                <div class="text-3xl font-bold text-yellow-400">{{ todo }}</div>
+                <div class="text-xs text-gray-500 mt-1">À faire</div>
+            </div>
+            <div>
+                <div class="text-3xl font-bold text-blue-400">{{ in_progress }}</div>
+                <div class="text-xs text-gray-500 mt-1">En cours</div>
+            </div>
+            <div>
+                <div class="text-3xl font-bold text-green-400">{{ done }}</div>
+                <div class="text-xs text-gray-500 mt-1">Terminé</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming events -->
+    <div class="bg-gray-900 rounded-xl p-5 border border-gray-800">
+        <h2 class="text-sm font-medium text-gray-400 mb-3">Prochains événements</h2>
+        {% if upcoming_events %}
+        <ul class="space-y-2">
+            {% for e in upcoming_events %}
+            <li class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full" style="background:{{ e.couleur }}"></span>
+                <span class="text-sm">{{ e.titre }}</span>
+                <span class="text-xs text-gray-500 ml-auto">{{ e.date_debut.strftime('%d/%m %H:%M') }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-gray-500">Aucun événement à venir.</p>
+        {% endif %}
+    </div>
+
+    <!-- Recent notes -->
+    <div class="bg-gray-900 rounded-xl p-5 border border-gray-800">
+        <h2 class="text-sm font-medium text-gray-400 mb-3">Notes récentes</h2>
+        {% if recent_notes %}
+        <ul class="space-y-2">
+            {% for n in recent_notes %}
+            <li>
+                <a href="/notes/edit/{{ n.id }}" class="text-sm text-blue-400 hover:underline">{{ n.titre }}</a>
+                <span class="text-xs text-gray-500 ml-2">{{ n.date_modif.strftime('%d/%m') }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-gray-500">Aucune note.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Goals chart -->
+{% if goals %}
+<div class="bg-gray-900 rounded-xl p-5 border border-gray-800">
+    <h2 class="text-sm font-medium text-gray-400 mb-4">Objectifs</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for g in goals %}
+        <div class="flex flex-col items-center">
+            <canvas id="goal-{{ g.id }}" width="140" height="140"></canvas>
+            <p class="mt-2 text-sm font-medium">{{ g.titre }}</p>
+            <p class="text-xs text-gray-500">{{ g.valeur_actuelle }}/{{ g.valeur_cible }} {{ g.unite }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if goals %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% for g in goals %}
+    new Chart(document.getElementById('goal-{{ g.id }}'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Fait', 'Restant'],
+            datasets: [{
+                data: [{{ g.valeur_actuelle }}, {{ [g.valeur_cible - g.valeur_actuelle, 0]|max }}],
+                backgroundColor: ['{{ g.couleur }}', '#1f2937'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '70%',
+            plugins: { legend: { display: false } },
+            responsive: false
+        }
+    });
+    {% endfor %}
+});
+</script>
+{% endif %}
+{% endblock %}

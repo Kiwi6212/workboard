@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Objectifs — WorkBoard{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Objectifs / KPIs</h1>
+
+<!-- Add goal form -->
+<details class="mb-6 bg-gray-900 rounded-xl border border-gray-800">
+    <summary class="px-5 py-3 cursor-pointer text-sm font-medium text-gray-300">+ Nouvel objectif</summary>
+    <form method="POST" action="/goals/add" class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input name="titre" placeholder="Titre" required class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700 focus:border-blue-500 outline-none">
+        <input name="description" placeholder="Description" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700 focus:border-blue-500 outline-none">
+        <input name="unite" placeholder="Unité (ex: %, heures)" value="%" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700">
+        <input name="valeur_cible" type="number" step="any" placeholder="Valeur cible" value="100" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700">
+        <input name="valeur_actuelle" type="number" step="any" placeholder="Valeur actuelle" value="0" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700">
+        <input name="date_echeance" type="date" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700">
+        <input name="couleur" type="color" value="#10b981" class="h-10 w-16 bg-gray-800 rounded border border-gray-700 cursor-pointer">
+        <div class="md:col-span-2">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition">Ajouter</button>
+        </div>
+    </form>
+</details>
+
+<!-- Goals list -->
+<div class="space-y-4">
+    {% for g in goals %}
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <div class="flex items-center justify-between mb-2">
+            <div>
+                <h3 class="font-medium">{{ g.titre }}</h3>
+                {% if g.description %}<p class="text-xs text-gray-400">{{ g.description }}</p>{% endif %}
+            </div>
+            <div class="flex items-center gap-3">
+                {% if g.date_echeance %}
+                <span class="text-xs text-gray-500">Échéance : {{ g.date_echeance.strftime('%d/%m/%Y') }}</span>
+                {% endif %}
+                <form method="POST" action="/goals/delete/{{ g.id }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="text-xs text-red-400 hover:text-red-300">&times;</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Progress bar -->
+        {% set pct = (g.valeur_actuelle / g.valeur_cible * 100) if g.valeur_cible else 0 %}
+        <div class="flex items-center gap-3">
+            <div class="flex-1 bg-gray-800 rounded-full h-3 overflow-hidden">
+                <div class="h-full rounded-full transition-all" style="width:{{ [pct, 100]|min }}%; background:{{ g.couleur }}"></div>
+            </div>
+            <span class="text-sm font-medium" style="color:{{ g.couleur }}">{{ '%.0f' | format(pct) }}%</span>
+            <span class="text-xs text-gray-500">{{ g.valeur_actuelle }}/{{ g.valeur_cible }} {{ g.unite }}</span>
+        </div>
+
+        <!-- Quick update -->
+        <form method="POST" action="/goals/update/{{ g.id }}" class="mt-3 flex items-center gap-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input name="valeur_actuelle" type="number" step="any" value="{{ g.valeur_actuelle }}" class="bg-gray-800 rounded px-2 py-1 text-sm border border-gray-700 w-24">
+            <button class="text-xs px-2 py-1 bg-gray-800 rounded hover:bg-gray-700 transition">Mettre à jour</button>
+        </form>
+    </div>
+    {% endfor %}
+    {% if not goals %}
+    <p class="text-sm text-gray-500">Aucun objectif défini.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Tâches — WorkBoard{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Tâches</h1>
+
+<!-- Add task form -->
+<details class="mb-6 bg-gray-900 rounded-xl border border-gray-800">
+    <summary class="px-5 py-3 cursor-pointer text-sm font-medium text-gray-300">+ Nouvelle tâche</summary>
+    <form method="POST" action="/tasks/add" class="p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input name="titre" placeholder="Titre" required class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700 focus:border-blue-500 outline-none">
+        <input name="description" placeholder="Description" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700 focus:border-blue-500 outline-none md:col-span-2">
+        <input name="priorite" type="number" value="0" min="0" max="10" placeholder="Priorité" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700">
+        <div class="md:col-span-4">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition">Ajouter</button>
+        </div>
+    </form>
+</details>
+
+<!-- Kanban -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    {% set columns = [('À faire', 'todo', todo, 'yellow'), ('En cours', 'in_progress', in_progress, 'blue'), ('Terminé', 'done', done, 'green')] %}
+    {% for label, status, tasks, color in columns %}
+    <div>
+        <h2 class="text-sm font-medium text-{{ color }}-400 mb-3 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-{{ color }}-400"></span>
+            {{ label }} ({{ tasks|length }})
+        </h2>
+        <div class="space-y-2">
+            {% for t in tasks %}
+            <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+                <div class="flex items-start justify-between mb-2">
+                    <h3 class="font-medium text-sm">{{ t.titre }}</h3>
+                    <span class="text-xs text-gray-500">P{{ t.priorite }}</span>
+                </div>
+                {% if t.description %}
+                <p class="text-xs text-gray-400 mb-3">{{ t.description }}</p>
+                {% endif %}
+
+                <!-- Timer -->
+                <div class="flex items-center gap-2 mb-3 text-xs">
+                    <span class="text-gray-500" id="time-{{ t.id }}">{{ '%02d:%02d:%02d' | format(t.temps_passe_sec // 3600, (t.temps_passe_sec % 3600) // 60, t.temps_passe_sec % 60) }}</span>
+                    <button onclick="toggleTimer({{ t.id }})" id="btn-{{ t.id }}" class="px-2 py-0.5 bg-gray-800 rounded hover:bg-gray-700 transition">Start</button>
+                </div>
+
+                <!-- Status change -->
+                <div class="flex items-center gap-1 flex-wrap">
+                    {% for s, sl in [('todo','À faire'),('in_progress','En cours'),('done','Terminé')] %}
+                    {% if s != status %}
+                    <form method="POST" action="/tasks/status/{{ t.id }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="statut" value="{{ s }}">
+                        <button class="text-xs px-2 py-0.5 bg-gray-800 rounded hover:bg-gray-700 transition">{{ sl }}</button>
+                    </form>
+                    {% endif %}
+                    {% endfor %}
+                    <form method="POST" action="/tasks/delete/{{ t.id }}" class="ml-auto">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="text-xs text-red-400 hover:text-red-300">&times;</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const timers = {};
+
+function toggleTimer(id) {
+    const btn = document.getElementById('btn-' + id);
+    if (timers[id]) {
+        clearInterval(timers[id].interval);
+        const elapsed = Math.floor((Date.now() - timers[id].start) / 1000);
+        fetch('/tasks/timer/' + id, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({seconds: elapsed})
+        });
+        delete timers[id];
+        btn.textContent = 'Start';
+    } else {
+        const display = document.getElementById('time-' + id);
+        const parts = display.textContent.split(':').map(Number);
+        let base = parts[0] * 3600 + parts[1] * 60 + parts[2];
+        const startTime = Date.now();
+        timers[id] = {
+            start: startTime,
+            interval: setInterval(() => {
+                const sec = base + Math.floor((Date.now() - startTime) / 1000);
+                const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+                const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+                const s = String(sec % 60).padStart(2, '0');
+                display.textContent = h + ':' + m + ':' + s;
+            }, 1000)
+        };
+        btn.textContent = 'Stop';
+    }
+}
+</script>
+{% endblock %}
