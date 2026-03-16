@@ -46,6 +46,7 @@ def create_app():
     from app.routes.docs import bp as docs_bp
     from app.routes.notes import bp as notes_bp
     from app.routes.goals import bp as goals_bp
+    from app.routes.stats import bp as stats_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(planning_bp, url_prefix="/planning")
@@ -54,6 +55,7 @@ def create_app():
     app.register_blueprint(docs_bp, url_prefix="/docs")
     app.register_blueprint(notes_bp, url_prefix="/notes")
     app.register_blueprint(goals_bp, url_prefix="/goals")
+    app.register_blueprint(stats_bp, url_prefix="/stats")
 
     with app.app_context():
         db.create_all()
