@@ -2,27 +2,33 @@
 {% block title %}Notes — WorkBoard{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold">Notes</h1>
-    <a href="/notes/new" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition">+ Nouvelle note</a>
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+    <h1 style="font-size:1.5rem; font-weight:700;">Notes</h1>
+    <a href="/notes/new" class="btn-primary" style="text-decoration:none;">+ Nouvelle note</a>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
     {% for n in notes %}
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-        <div class="flex items-start justify-between mb-2">
-            <a href="/notes/edit/{{ n.id }}" class="font-medium text-sm text-blue-400 hover:underline">{{ n.titre }}</a>
+    <div class="glass" style="padding:20px;">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px;">
+            <a href="/notes/edit/{{ n.id }}" class="text-accent" style="font-size:0.875rem; font-weight:500; text-decoration:none;">{{ n.titre }}</a>
             <form method="POST" action="/notes/delete/{{ n.id }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="text-xs text-red-400 hover:text-red-300">&times;</button>
+                <button style="font-size:0.8rem; color:#f87171; background:none; border:none; cursor:pointer;">&times;</button>
             </form>
         </div>
-        <p class="text-xs text-gray-400 line-clamp-3">{{ n.contenu_md[:150] }}</p>
-        <div class="text-xs text-gray-600 mt-3">{{ n.date_modif.strftime('%d/%m/%Y %H:%M') }}</div>
+        <p class="text-muted" style="font-size:0.75rem; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">{{ n.contenu_md[:150] }}</p>
+        <div class="text-muted" style="font-size:0.7rem; margin-top:12px;">{{ n.date_modif.strftime('%d/%m/%Y %H:%M') }}</div>
     </div>
     {% endfor %}
-    {% if not notes %}
-    <p class="text-sm text-gray-500">Aucune note.</p>
-    {% endif %}
 </div>
+
+{% if not notes %}
+<div class="glass" style="padding:20px;">
+    <div class="empty-state">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        <p class="text-muted">Aucune note encore — lancez-vous avec votre première idée !</p>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

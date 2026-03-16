@@ -2,62 +2,63 @@
 {% block title %}Tâches — WorkBoard{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-6">Tâches</h1>
+<h1 style="font-size:1.5rem; font-weight:700; margin-bottom:24px;">Tâches</h1>
 
 <!-- Add task form -->
-<details class="mb-6 bg-gray-900 rounded-xl border border-gray-800">
-    <summary class="px-5 py-3 cursor-pointer text-sm font-medium text-gray-300">+ Nouvelle tâche</summary>
-    <form method="POST" action="/tasks/add" class="p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+<details class="glass" style="margin-bottom:24px;">
+    <summary style="color:inherit;">+ Nouvelle tâche</summary>
+    <form method="POST" action="/tasks/add" style="padding:20px; display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input name="titre" placeholder="Titre" required class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700 focus:border-blue-500 outline-none">
-        <input name="description" placeholder="Description" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700 focus:border-blue-500 outline-none md:col-span-2">
-        <input name="priorite" type="number" value="0" min="0" max="10" placeholder="Priorité" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700">
-        <div class="md:col-span-4">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition">Ajouter</button>
+        <input name="titre" placeholder="Titre" required class="glass-input">
+        <input name="description" placeholder="Description" class="glass-input" style="grid-column:span 2;">
+        <input name="priorite" type="number" value="0" min="0" max="10" placeholder="Priorité" class="glass-input">
+        <div style="grid-column:span 4;">
+            <button type="submit" class="btn-primary">Ajouter</button>
         </div>
     </form>
 </details>
 
 <!-- Kanban -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    {% set columns = [('À faire', 'todo', todo, 'yellow'), ('En cours', 'in_progress', in_progress, 'blue'), ('Terminé', 'done', done, 'green')] %}
-    {% for label, status, tasks, color in columns %}
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px;">
+    {% set columns = [('À faire', 'todo', todo, '#eab308', 'rgba(234,179,8,0.15)'), ('En cours', 'in_progress', in_progress, '#a78bfa', 'rgba(124,109,232,0.15)'), ('Terminé', 'done', done, '#22c55e', 'rgba(34,197,94,0.15)')] %}
+    {% for label, status, tasks, color, bg in columns %}
     <div>
-        <h2 class="text-sm font-medium text-{{ color }}-400 mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-{{ color }}-400"></span>
-            {{ label }} ({{ tasks|length }})
-        </h2>
-        <div class="space-y-2">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+            <span style="width:8px; height:8px; border-radius:50%; background:{{ color }};"></span>
+            <span style="font-size:0.875rem; font-weight:600; color:{{ color }};">{{ label }}</span>
+            <span class="badge" style="background:{{ bg }}; color:{{ color }};">{{ tasks|length }}</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
             {% for t in tasks %}
-            <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
-                <div class="flex items-start justify-between mb-2">
-                    <h3 class="font-medium text-sm">{{ t.titre }}</h3>
-                    <span class="text-xs text-gray-500">P{{ t.priorite }}</span>
+            <div class="glass" style="padding:16px;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px;">
+                    <h3 style="font-size:0.875rem; font-weight:500;">{{ t.titre }}</h3>
+                    <span class="badge" style="background:rgba(255,255,255,0.08); font-size:0.7rem;">P{{ t.priorite }}</span>
                 </div>
                 {% if t.description %}
-                <p class="text-xs text-gray-400 mb-3">{{ t.description }}</p>
+                <p class="text-muted" style="font-size:0.75rem; margin-bottom:12px;">{{ t.description }}</p>
                 {% endif %}
 
                 <!-- Timer -->
-                <div class="flex items-center gap-2 mb-3 text-xs">
-                    <span class="text-gray-500" id="time-{{ t.id }}">{{ '%02d:%02d:%02d' | format(t.temps_passe_sec // 3600, (t.temps_passe_sec % 3600) // 60, t.temps_passe_sec % 60) }}</span>
-                    <button onclick="toggleTimer({{ t.id }})" id="btn-{{ t.id }}" class="px-2 py-0.5 bg-gray-800 rounded hover:bg-gray-700 transition">Start</button>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:0.75rem;">
+                    <span class="text-muted" id="time-{{ t.id }}">{{ '%02d:%02d:%02d' | format(t.temps_passe_sec // 3600, (t.temps_passe_sec % 3600) // 60, t.temps_passe_sec % 60) }}</span>
+                    <button onclick="toggleTimer({{ t.id }})" id="btn-{{ t.id }}" class="btn-ghost">Start</button>
                 </div>
 
                 <!-- Status change -->
-                <div class="flex items-center gap-1 flex-wrap">
+                <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
                     {% for s, sl in [('todo','À faire'),('in_progress','En cours'),('done','Terminé')] %}
                     {% if s != status %}
                     <form method="POST" action="/tasks/status/{{ t.id }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="statut" value="{{ s }}">
-                        <button class="text-xs px-2 py-0.5 bg-gray-800 rounded hover:bg-gray-700 transition">{{ sl }}</button>
+                        <button class="btn-ghost">{{ sl }}</button>
                     </form>
                     {% endif %}
                     {% endfor %}
-                    <form method="POST" action="/tasks/delete/{{ t.id }}" class="ml-auto">
+                    <form method="POST" action="/tasks/delete/{{ t.id }}" style="margin-left:auto;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button class="text-xs text-red-400 hover:text-red-300">&times;</button>
+                        <button style="font-size:0.8rem; color:#f87171; background:none; border:none; cursor:pointer;">&times;</button>
                     </form>
                 </div>
             </div>

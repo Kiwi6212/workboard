@@ -12,34 +12,36 @@
     #preview ul, #preview ol { padding-left: 1.5em; margin: .5em 0; }
     #preview ul { list-style: disc; }
     #preview ol { list-style: decimal; }
-    #preview code { background: #1f2937; padding: .15em .3em; border-radius: .25em; font-size: .9em; }
-    #preview pre { background: #1f2937; padding: 1em; border-radius: .5em; overflow-x: auto; }
-    #preview blockquote { border-left: 3px solid #4b5563; padding-left: 1em; color: #9ca3af; }
-    #preview a { color: #60a5fa; text-decoration: underline; }
+    #preview code { background: rgba(255,255,255,0.08); padding: .15em .3em; border-radius: .25em; font-size: .9em; }
+    html.light-mode #preview code { background: rgba(0,0,0,0.06); }
+    #preview pre { background: rgba(255,255,255,0.05); padding: 1em; border-radius: .5em; overflow-x: auto; }
+    html.light-mode #preview pre { background: rgba(0,0,0,0.04); }
+    #preview blockquote { border-left: 3px solid #7c6de8; padding-left: 1em; opacity: 0.7; }
+    #preview a { color: #7c6de8; text-decoration: underline; }
 </style>
 {% endblock %}
 
 {% block content %}
 <form method="POST" id="note-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="flex items-center justify-between mb-6">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
         <input name="titre" id="titre" value="{{ note.titre if note else '' }}" placeholder="Titre de la note" required
-               class="text-2xl font-bold bg-transparent border-none outline-none w-full">
-        <div class="flex gap-2">
-            <a href="/notes/" class="px-4 py-2 bg-gray-800 rounded-lg text-sm hover:bg-gray-700 transition">Retour</a>
-            <button type="submit" class="px-4 py-2 bg-blue-600 rounded-lg text-sm hover:bg-blue-700 transition font-medium">Sauvegarder</button>
+               class="glass-input" style="font-size:1.5rem; font-weight:700; background:transparent; border:none; flex:1; padding:0;">
+        <div style="display:flex; gap:8px;">
+            <a href="/notes/" class="btn-ghost" style="text-decoration:none; padding:8px 16px;">Retour</a>
+            <button type="submit" class="btn-primary">Sauvegarder</button>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
         <div>
-            <label class="text-xs text-gray-500 mb-1 block">Markdown</label>
+            <label class="text-muted" style="font-size:0.75rem; margin-bottom:6px; display:block;">Markdown</label>
             <textarea name="contenu_md" id="editor" rows="20"
-                      class="w-full bg-gray-900 rounded-xl border border-gray-800 p-4 text-sm font-mono resize-y outline-none focus:border-blue-500">{{ note.contenu_md if note else '' }}</textarea>
+                      class="glass-input" style="width:100%; font-family:monospace; resize:vertical; border-radius:16px; padding:16px;">{{ note.contenu_md if note else '' }}</textarea>
         </div>
         <div>
-            <label class="text-xs text-gray-500 mb-1 block">Aperçu</label>
-            <div id="preview" class="bg-gray-900 rounded-xl border border-gray-800 p-4 text-sm overflow-y-auto"></div>
+            <label class="text-muted" style="font-size:0.75rem; margin-bottom:6px; display:block;">Aperçu</label>
+            <div id="preview" class="glass" style="padding:16px; font-size:0.875rem; overflow-y:auto;"></div>
         </div>
     </div>
 </form>

@@ -2,54 +2,54 @@
 {% block title %}Planning — WorkBoard{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold">Planning</h1>
-    <div class="flex items-center gap-3">
-        <a href="?week={{ prev_week }}" class="px-3 py-1 bg-gray-800 rounded hover:bg-gray-700 text-sm">&larr; Sem. préc.</a>
-        <span class="text-sm text-gray-400">Semaine du {{ start.strftime('%d/%m/%Y') }}</span>
-        <a href="?week={{ next_week }}" class="px-3 py-1 bg-gray-800 rounded hover:bg-gray-700 text-sm">Sem. suiv. &rarr;</a>
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+    <h1 style="font-size:1.5rem; font-weight:700;">Planning</h1>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <a href="?week={{ prev_week }}" class="btn-ghost">&larr; Sem. préc.</a>
+        <span class="text-muted" style="font-size:0.875rem;">Semaine du {{ start.strftime('%d/%m/%Y') }}</span>
+        <a href="?week={{ next_week }}" class="btn-ghost" style="text-decoration:none;">Sem. suiv. &rarr;</a>
     </div>
 </div>
 
 <!-- Add event form -->
-<details class="mb-6 bg-gray-900 rounded-xl border border-gray-800">
-    <summary class="px-5 py-3 cursor-pointer text-sm font-medium text-gray-300">+ Ajouter un événement</summary>
-    <form method="POST" action="/planning/add" class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+<details class="glass" style="margin-bottom:24px;">
+    <summary style="color:inherit;">+ Ajouter un événement</summary>
+    <form method="POST" action="/planning/add" style="padding:20px; display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input name="titre" placeholder="Titre" required class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700 focus:border-blue-500 outline-none">
-        <input name="description" placeholder="Description" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700 focus:border-blue-500 outline-none">
-        <select name="type" class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700">
+        <input name="titre" placeholder="Titre" required class="glass-input">
+        <input name="description" placeholder="Description" class="glass-input">
+        <select name="type" class="glass-input">
             <option value="cours">Cours</option>
             <option value="tache">Tâche</option>
             <option value="perso">Perso</option>
             <option value="alternance">Alternance</option>
         </select>
-        <input name="date_debut" type="datetime-local" required class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700">
-        <input name="date_fin" type="datetime-local" required class="bg-gray-800 rounded-lg px-3 py-2 text-sm border border-gray-700">
-        <input name="couleur" type="color" value="#3b82f6" class="h-10 w-16 bg-gray-800 rounded border border-gray-700 cursor-pointer">
-        <div class="md:col-span-3">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition">Ajouter</button>
+        <input name="date_debut" type="datetime-local" required class="glass-input">
+        <input name="date_fin" type="datetime-local" required class="glass-input">
+        <input name="couleur" type="color" value="#7c6de8" class="glass-input" style="height:40px; width:64px;">
+        <div style="grid-column:span 3;">
+            <button type="submit" class="btn-primary">Ajouter</button>
         </div>
     </form>
 </details>
 
 <!-- Weekly grid -->
-<div class="grid grid-cols-7 gap-2">
+<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:8px;">
     {% set day_names = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'] %}
     {% for day, events in days %}
-    <div class="bg-gray-900 rounded-xl border border-gray-800 min-h-[200px]">
-        <div class="px-3 py-2 border-b border-gray-800 text-center">
-            <div class="text-xs text-gray-500">{{ day_names[loop.index0] }}</div>
-            <div class="text-lg font-bold">{{ day.strftime('%d') }}</div>
+    <div class="glass" style="min-height:200px; overflow:hidden;">
+        <div style="padding:10px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em;">{{ day_names[loop.index0] }}</div>
+            <div style="font-size:1.25rem; font-weight:700;">{{ day.strftime('%d') }}</div>
         </div>
-        <div class="p-2 space-y-1">
+        <div style="padding:6px; display:flex; flex-direction:column; gap:4px;">
             {% for e in events %}
-            <div class="rounded-lg px-2 py-1 text-xs" style="background:{{ e.couleur }}22; border-left: 3px solid {{ e.couleur }}">
-                <div class="font-medium" style="color:{{ e.couleur }}">{{ e.titre }}</div>
-                <div class="text-gray-500">{{ e.date_debut.strftime('%H:%M') }}</div>
-                <form method="POST" action="/planning/delete/{{ e.id }}" class="mt-1">
+            <div style="border-radius:10px; padding:6px 8px; font-size:0.75rem; background:{{ e.couleur }}15; border-left:3px solid {{ e.couleur }};">
+                <div style="font-weight:500; color:{{ e.couleur }};">{{ e.titre }}</div>
+                <div class="text-muted" style="font-size:0.7rem;">{{ e.date_debut.strftime('%H:%M') }}</div>
+                <form method="POST" action="/planning/delete/{{ e.id }}" style="margin-top:4px;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button class="text-red-400 hover:text-red-300 text-xs">&times; Suppr.</button>
+                    <button style="font-size:0.7rem; color:#f87171; background:none; border:none; cursor:pointer;">&times; Suppr.</button>
                 </form>
             </div>
             {% endfor %}

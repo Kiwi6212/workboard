@@ -1,54 +1,317 @@
 <!DOCTYPE html>
-<html lang="fr" class="dark">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}WorkBoard{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config={darkMode:'class'}</script>
     <style>
-        body { font-family: 'Inter', system-ui, sans-serif; }
-        .sidebar-link.active { background: rgba(59,130,246,.15); color: #3b82f6; }
+        *, *::before, *::after { font-family: 'Inter', system-ui, sans-serif; }
+        a, button, input, select, textarea, details, summary { transition: all 0.2s ease; }
+
+        /* Animated gradient backgrounds */
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        html.light-mode body {
+            background: linear-gradient(135deg, #e8eaf6, #c5cae9, #e3f2fd);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
+            color: #1e293b;
+        }
+
+        /* Glass card */
+        .glass {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+        }
+        html.light-mode .glass {
+            background: rgba(255,255,255,0.6);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 220px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            z-index: 50;
+        }
+        html.light-mode .sidebar {
+            background: rgba(255,255,255,0.4);
+            border-right: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* Sidebar nav items */
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 14px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+        }
+        html.light-mode .nav-item { color: rgba(30,41,59,0.6); }
+        .nav-item:hover { background: rgba(255,255,255,0.05); }
+        html.light-mode .nav-item:hover { background: rgba(0,0,0,0.05); }
+        .nav-item.active {
+            background: rgba(124,109,232,0.2);
+            color: #a78bfa;
+            border-left: 3px solid #7c6de8;
+        }
+        html.light-mode .nav-item.active { color: #6d5dcd; }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+        /* Content area */
+        .main-content { margin-left: 220px; flex: 1; padding: 32px; overflow-y: auto; min-height: 100vh; }
+
+        /* Form inputs */
+        .glass-input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            color: inherit;
+            outline: none;
+        }
+        html.light-mode .glass-input {
+            background: rgba(255,255,255,0.5);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .glass-input:focus {
+            border-color: #7c6de8;
+            box-shadow: 0 0 0 2px rgba(124,109,232,0.3);
+        }
+        .glass-input::placeholder { color: rgba(255,255,255,0.3); }
+        html.light-mode .glass-input::placeholder { color: rgba(0,0,0,0.35); }
+
+        /* Primary buttons */
+        .btn-primary {
+            background: #7c6de8;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 18px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn-primary:hover { background: #6a5dd4; }
+
+        /* Ghost / secondary buttons */
+        .btn-ghost {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 5px 12px;
+            font-size: 0.75rem;
+            color: inherit;
+            cursor: pointer;
+        }
+        html.light-mode .btn-ghost {
+            background: rgba(255,255,255,0.4);
+            border: 1px solid rgba(0,0,0,0.08);
+        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+        html.light-mode .btn-ghost:hover { background: rgba(0,0,0,0.05); }
+
+        /* Glass card header */
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        html.light-mode .card-header { border-bottom-color: rgba(0,0,0,0.08); }
+        .card-header svg { width: 18px; height: 18px; color: #7c6de8; }
+
+        /* Accent text */
+        .text-accent { color: #7c6de8; }
+
+        /* Muted text */
+        .text-muted { color: rgba(255,255,255,0.4); }
+        html.light-mode .text-muted { color: rgba(30,41,59,0.5); }
+
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Details / summary for forms */
+        details.glass summary { cursor: pointer; padding: 14px 20px; font-size: 0.875rem; font-weight: 500; }
+        details.glass summary::-webkit-details-marker { display: none; }
+        details.glass summary::marker { display: none; content: ''; }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: inherit;
+        }
+        html.light-mode .theme-toggle {
+            background: rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.08);
+        }
+        .theme-toggle:hover { background: rgba(255,255,255,0.1); }
+        html.light-mode .theme-toggle:hover { background: rgba(0,0,0,0.08); }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+            text-align: center;
+        }
+        .empty-state svg { width: 48px; height: 48px; color: rgba(124,109,232,0.4); margin-bottom: 12px; }
+        .empty-state p { font-size: 0.875rem; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        html.light-mode ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); }
+
+        /* Color input fix */
+        input[type="color"] { padding: 2px; cursor: pointer; }
+
+        /* Select styling */
+        select.glass-input { appearance: auto; }
     </style>
     {% block head %}{% endblock %}
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen flex">
+<body class="flex">
     <!-- Sidebar -->
-    <nav class="w-56 bg-gray-900 border-r border-gray-800 flex flex-col fixed h-full">
-        <div class="p-4 text-xl font-bold tracking-tight border-b border-gray-800">WorkBoard</div>
-        <div class="flex-1 p-2 space-y-1">
-            <a href="/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if request.path == '/' %}active{% endif %}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
+    <nav class="sidebar">
+        <div style="padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c6de8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v3"/>
+                </svg>
+                <span style="font-size:1.15rem; font-weight:700; letter-spacing:-0.02em;">WorkBoard</span>
+            </div>
+        </div>
+
+        <div style="flex:1; padding:10px 8px; display:flex; flex-direction:column; gap:2px;">
+            <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
                 Dashboard
             </a>
-            <a href="/planning/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if '/planning' in request.path %}active{% endif %}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <a href="/planning/" class="nav-item {% if '/planning' in request.path %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 Planning
             </a>
-            <a href="/tasks/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if '/tasks' in request.path %}active{% endif %}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            <a href="/tasks/" class="nav-item {% if '/tasks' in request.path %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                 Tâches
             </a>
-            <a href="/docs/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if '/docs' in request.path %}active{% endif %}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            <a href="/docs/" class="nav-item {% if '/docs' in request.path %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                 Documents
             </a>
-            <a href="/notes/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if '/notes' in request.path %}active{% endif %}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            <a href="/notes/" class="nav-item {% if '/notes' in request.path %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 Notes
             </a>
-            <a href="/goals/" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition {% if '/goals' in request.path %}active{% endif %}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <a href="/goals/" class="nav-item {% if '/goals' in request.path %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 Objectifs
             </a>
+        </div>
+
+        <div style="padding: 12px; border-top: 1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between;">
+            <button class="theme-toggle" id="theme-toggle" title="Changer le thème">
+                <svg id="icon-sun" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none;"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <svg id="icon-moon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+            </button>
+            <span class="text-muted" style="font-size:0.7rem;">v1.0</span>
         </div>
     </nav>
 
     <!-- Main content -->
-    <main class="ml-56 flex-1 p-8 overflow-y-auto">
+    <main class="main-content">
         {% block content %}{% endblock %}
     </main>
 
     {% block scripts %}{% endblock %}
+
+    <script>
+    (function() {
+        const html = document.documentElement;
+        const toggle = document.getElementById('theme-toggle');
+        const iconSun = document.getElementById('icon-sun');
+        const iconMoon = document.getElementById('icon-moon');
+
+        function applyTheme(light) {
+            if (light) {
+                html.classList.add('light-mode');
+                iconSun.style.display = 'block';
+                iconMoon.style.display = 'none';
+            } else {
+                html.classList.remove('light-mode');
+                iconSun.style.display = 'none';
+                iconMoon.style.display = 'block';
+            }
+        }
+
+        // Init: localStorage first, then prefers-color-scheme
+        const stored = localStorage.getItem('theme');
+        if (stored) {
+            applyTheme(stored === 'light');
+        } else {
+            applyTheme(window.matchMedia('(prefers-color-scheme: light)').matches);
+        }
+
+        toggle.addEventListener('click', function() {
+            const isLight = html.classList.contains('light-mode');
+            applyTheme(!isLight);
+            localStorage.setItem('theme', !isLight ? 'light' : 'dark');
+        });
+    })();
+    </script>
 </body>
 </html>
