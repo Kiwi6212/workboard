@@ -44,6 +44,21 @@ class Note(db.Model):
     date_modif = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
+class Intervention(db.Model):
+    __tablename__ = "interventions"
+    id = db.Column(db.Integer, primary_key=True)
+    titre = db.Column(db.String(200), nullable=False)
+    lieu = db.Column(db.String(200), default="")
+    demandeur = db.Column(db.String(200), default="")
+    type_probleme = db.Column(db.String(20), nullable=False, default="autre")  # reseau, materiel, logiciel, imprimante, autre
+    priorite = db.Column(db.String(10), nullable=False, default="normal")  # urgent, normal
+    statut = db.Column(db.String(20), nullable=False, default="en_attente")  # en_attente, en_cours, resolu, non_resolu
+    duree_minutes = db.Column(db.Integer, nullable=True)
+    notes_solution = db.Column(db.Text, nullable=True)
+    date_creation = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    date_resolution = db.Column(db.DateTime, nullable=True)
+
+
 class Goal(db.Model):
     __tablename__ = "goals"
     id = db.Column(db.Integer, primary_key=True)

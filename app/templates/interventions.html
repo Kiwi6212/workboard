@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Interventions — WorkBoard{% endblock %}
+{% block head %}
+<style>
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+        background: rgba(30,25,60,0.95);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 24px;
+        width: 480px;
+        max-width: 90vw;
+    }
+    html.light-mode .modal-box {
+        background: rgba(255,255,255,0.95);
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+    <h1 style="font-size:1.5rem; font-weight:700;">Interventions</h1>
+    <button class="btn-primary" onclick="document.getElementById('modal').classList.add('open')">+ Nouvelle intervention</button>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 style="font-weight:600;">Nouvelle intervention</h2>
+            <button onclick="document.getElementById('modal').classList.remove('open')" style="background:none; border:none; color:inherit; font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+        <form method="POST" action="/interventions/new" style="display:flex; flex-direction:column; gap:12px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input name="titre" placeholder="Titre de l'intervention" required class="glass-input">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <input name="lieu" placeholder="Lieu / Salle" class="glass-input">
+                <input name="demandeur" placeholder="Demandeur" class="glass-input">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <select name="type_probleme" class="glass-input">
+                    <option value="reseau">Réseau</option>
+                    <option value="materiel">Matériel</option>
+                    <option value="logiciel">Logiciel</option>
+                    <option value="imprimante">Imprimante</option>
+                    <option value="autre" selected>Autre</option>
+                </select>
+                <select name="priorite" class="glass-input">
+                    <option value="normal" selected>Normal</option>
+                    <option value="urgent">Urgent</option>
+                </select>
+            </div>
+            <input name="duree_minutes" type="number" min="0" placeholder="Durée estimée (minutes)" class="glass-input">
+            <textarea name="notes_solution" placeholder="Notes / solution" rows="3" class="glass-input" style="resize:vertical;"></textarea>
+            <button type="submit" class="btn-primary">Créer</button>
+        </form>
+    </div>
+</div>
+
+<!-- Kanban -->
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px;">
+    {% set columns = [
+        ('En attente', en_attente, '#eab308', 'rgba(234,179,8,0.15)'),
+        ('En cours', en_cours, '#a78bfa', 'rgba(124,109,232,0.15)'),
+        ('Résolu / Non résolu', resolues, '#22c55e', 'rgba(34,197,94,0.15)')
+    ] %}
+    {% for label, items, color, bg in columns %}
+    <div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+            <span style="width:8px; height:8px; border-radius:50%; background:{{ color }};"></span>
+            <span style="font-size:0.875rem; font-weight:600; color:{{ color }};">{{ label }}</span>
+            <span class="badge" style="background:{{ bg }}; color:{{ color }};">{{ items|length }}</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            {% for item in items %}
+            <a href="/interventions/{{ item.id }}" class="glass" style="padding:16px; text-decoration:none; color:inherit; display:block;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px;">
+                    <h3 style="font-size:0.875rem; font-weight:500;">{{ item.titre }}</h3>
+                    {% if item.priorite == 'urgent' %}
+                    <span class="badge" style="background:rgba(239,68,68,0.15); color:#ef4444; font-size:0.7rem;">Urgent</span>
+                    {% else %}
+                    <span class="badge" style="background:rgba(255,255,255,0.08); font-size:0.7rem;">Normal</span>
+                    {% endif %}
+                </div>
+                {% if item.lieu %}
+                <div class="text-muted" style="font-size:0.75rem; margin-bottom:4px;">
+                    <svg style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:4px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    {{ item.lieu }}
+                </div>
+                {% endif %}
+                {% if item.demandeur %}
+                <div class="text-muted" style="font-size:0.75rem; margin-bottom:6px;">
+                    <svg style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:4px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    {{ item.demandeur }}
+                </div>
+                {% endif %}
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    {% set type_colors = {'reseau':'#3b82f6','materiel':'#f59e0b','logiciel':'#8b5cf6','imprimante':'#06b6d4','autre':'#6b7280'} %}
+                    {% set type_labels = {'reseau':'Réseau','materiel':'Matériel','logiciel':'Logiciel','imprimante':'Imprimante','autre':'Autre'} %}
+                    <span class="badge" style="background:{{ type_colors[item.type_probleme] }}20; color:{{ type_colors[item.type_probleme] }}; font-size:0.7rem;">{{ type_labels[item.type_probleme] }}</span>
+                    {% if item.duree_minutes %}
+                    <span class="text-muted" style="font-size:0.7rem;">{{ item.duree_minutes }} min</span>
+                    {% endif %}
+                    {% if item.statut == 'non_resolu' %}
+                    <span class="badge" style="background:rgba(239,68,68,0.15); color:#ef4444; font-size:0.7rem;">Non résolu</span>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

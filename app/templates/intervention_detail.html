@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ i.titre }} — Interventions — WorkBoard{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+    <a href="/interventions/" class="btn-ghost" style="text-decoration:none; padding:8px 16px;">&larr; Retour</a>
+    <h1 style="font-size:1.5rem; font-weight:700;">{{ i.titre }}</h1>
+    {% if i.priorite == 'urgent' %}
+    <span class="badge" style="background:rgba(239,68,68,0.15); color:#ef4444;">Urgent</span>
+    {% else %}
+    <span class="badge" style="background:rgba(255,255,255,0.08);">Normal</span>
+    {% endif %}
+    {% set statut_colors = {'en_attente':'#eab308','en_cours':'#a78bfa','resolu':'#22c55e','non_resolu':'#ef4444'} %}
+    {% set statut_labels = {'en_attente':'En attente','en_cours':'En cours','resolu':'Résolu','non_resolu':'Non résolu'} %}
+    <span class="badge" style="background:{{ statut_colors[i.statut] }}20; color:{{ statut_colors[i.statut] }};">{{ statut_labels[i.statut] }}</span>
+</div>
+
+<div style="display:grid; grid-template-columns:2fr 1fr; gap:20px;">
+    <!-- Edit form -->
+    <div class="glass" style="padding:24px;">
+        <div class="card-header">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            Modifier l'intervention
+        </div>
+        <form method="POST" action="/interventions/{{ i.id }}/edit" style="display:flex; flex-direction:column; gap:12px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Titre</label>
+                <input name="titre" value="{{ i.titre }}" required class="glass-input" style="width:100%;">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Lieu / Salle</label>
+                    <input name="lieu" value="{{ i.lieu }}" class="glass-input" style="width:100%;">
+                </div>
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Demandeur</label>
+                    <input name="demandeur" value="{{ i.demandeur }}" class="glass-input" style="width:100%;">
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Type</label>
+                    <select name="type_probleme" class="glass-input" style="width:100%;">
+                        {% for val, lab in [('reseau','Réseau'),('materiel','Matériel'),('logiciel','Logiciel'),('imprimante','Imprimante'),('autre','Autre')] %}
+                        <option value="{{ val }}" {% if i.type_probleme == val %}selected{% endif %}>{{ lab }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Priorité</label>
+                    <select name="priorite" class="glass-input" style="width:100%;">
+                        <option value="normal" {% if i.priorite == 'normal' %}selected{% endif %}>Normal</option>
+                        <option value="urgent" {% if i.priorite == 'urgent' %}selected{% endif %}>Urgent</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Durée (min)</label>
+                    <input name="duree_minutes" type="number" min="0" value="{{ i.duree_minutes or '' }}" class="glass-input" style="width:100%;">
+                </div>
+            </div>
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Notes / Solution</label>
+                <textarea name="notes_solution" rows="4" class="glass-input" style="width:100%; resize:vertical;">{{ i.notes_solution or '' }}</textarea>
+            </div>
+            <button type="submit" class="btn-primary" style="align-self:flex-start;">Sauvegarder</button>
+        </form>
+    </div>
+
+    <!-- Side panel: status + info + delete -->
+    <div style="display:flex; flex-direction:column; gap:16px;">
+        <!-- Change status -->
+        <div class="glass" style="padding:20px;">
+            <div class="card-header">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Changer le statut
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                {% for val, lab in [('en_attente','En attente'),('en_cours','En cours'),('resolu','Résolu'),('non_resolu','Non résolu')] %}
+                {% if val != i.statut %}
+                <form method="POST" action="/interventions/{{ i.id }}/statut">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="statut" value="{{ val }}">
+                    <button class="btn-ghost" style="width:100%; text-align:left; padding:8px 12px;">{{ lab }}</button>
+                </form>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="glass" style="padding:20px;">
+            <div class="card-header">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Informations
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
+                <div>
+                    <span class="text-muted">Créée le :</span>
+                    <span>{{ i.date_creation.strftime('%d/%m/%Y à %H:%M') }}</span>
+                </div>
+                {% if i.date_resolution %}
+                <div>
+                    <span class="text-muted">Résolue le :</span>
+                    <span>{{ i.date_resolution.strftime('%d/%m/%Y à %H:%M') }}</span>
+                </div>
+                {% endif %}
+                {% if i.duree_minutes %}
+                <div>
+                    <span class="text-muted">Durée :</span>
+                    <span>{{ i.duree_minutes }} minutes</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Delete -->
+        <div class="glass" style="padding:20px;">
+            <form method="POST" action="/interventions/{{ i.id }}/delete" onsubmit="return confirm('Supprimer cette intervention ?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button style="width:100%; padding:8px; border-radius:10px; border:1px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.1); color:#ef4444; font-size:0.875rem; cursor:pointer;">Supprimer l'intervention</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

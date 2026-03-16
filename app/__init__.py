@@ -24,6 +24,9 @@ def create_app():
             return
         token = app.config["WB_TOKEN"]
         if request.cookies.get("wb_session") != token:
+            qs_token = request.args.get("token")
+            if qs_token:
+                return redirect(url_for("login", token=qs_token))
             return redirect(url_for("login"))
 
     @app.route("/login")
@@ -39,6 +42,7 @@ def create_app():
     from app.routes.dashboard import bp as dashboard_bp
     from app.routes.planning import bp as planning_bp
     from app.routes.tasks import bp as tasks_bp
+    from app.routes.interventions import bp as interventions_bp
     from app.routes.docs import bp as docs_bp
     from app.routes.notes import bp as notes_bp
     from app.routes.goals import bp as goals_bp
@@ -46,6 +50,7 @@ def create_app():
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(planning_bp, url_prefix="/planning")
     app.register_blueprint(tasks_bp, url_prefix="/tasks")
+    app.register_blueprint(interventions_bp, url_prefix="/interventions")
     app.register_blueprint(docs_bp, url_prefix="/docs")
     app.register_blueprint(notes_bp, url_prefix="/notes")
     app.register_blueprint(goals_bp, url_prefix="/goals")

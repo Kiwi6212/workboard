@@ -7,7 +7,7 @@
 {% block content %}
 <h1 style="font-size:1.5rem; font-weight:700; margin-bottom:24px;">Dashboard</h1>
 
-<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:20px; margin-bottom:24px;">
+<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:20px; margin-bottom:24px;">
     <!-- Task summary -->
     <div class="glass" style="padding:20px;">
         <div class="card-header">
@@ -43,6 +43,19 @@
             <p class="text-muted">Votre agenda est libre — profitez-en !</p>
         </div>
         {% endif %}
+    </div>
+
+    <!-- Interventions du mois -->
+    <div class="glass" style="padding:20px;">
+        <div class="card-header">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+            Interventions du mois
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <span class="badge" style="background:rgba(124,109,232,0.15); color:#a78bfa;">{{ interv_total }} Total</span>
+            <span class="badge" style="background:rgba(239,68,68,0.15); color:#ef4444;">{{ interv_urgent }} Urgentes</span>
+            <span class="badge" style="background:rgba(34,197,94,0.15); color:#22c55e;">{{ interv_resolu }} Résolues</span>
+        </div>
     </div>
 
     <!-- Recent notes -->
