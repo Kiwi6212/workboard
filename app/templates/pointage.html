@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+{% block title %}Pointage — WorkBoard{% endblock %}
+{% block head %}
+<style>
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+        background: rgba(30,25,60,0.95);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 24px;
+        width: 480px;
+        max-width: 90vw;
+    }
+    html.light-mode .modal-box {
+        background: rgba(255,255,255,0.95);
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+    .pointage-btn {
+        padding: 16px 32px;
+        border: none;
+        border-radius: 14px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: #fff;
+        transition: all 0.2s ease;
+    }
+    .pointage-btn.arrivee { background: #22c55e; }
+    .pointage-btn.arrivee:hover { background: #16a34a; }
+    .pointage-btn.depart { background: #f59e0b; }
+    .pointage-btn.depart:hover { background: #d97706; }
+    .solde-positif { color: #22c55e; }
+    .solde-negatif { color: #ef4444; }
+    .export-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+    .export-dropdown-content {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: rgba(30,25,60,0.95);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 8px;
+        min-width: 180px;
+        z-index: 10;
+    }
+    html.light-mode .export-dropdown-content {
+        background: rgba(255,255,255,0.95);
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+    .export-dropdown-content.show { display: block; }
+    .export-dropdown-content a {
+        display: block;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        text-decoration: none;
+        color: inherit;
+        border-radius: 8px;
+    }
+    .export-dropdown-content a:hover { background: rgba(255,255,255,0.08); }
+    html.light-mode .export-dropdown-content a:hover { background: rgba(0,0,0,0.05); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+    <div>
+        <h1 style="font-size:1.5rem; font-weight:700; margin-bottom:4px;">Pointage</h1>
+        <p class="text-muted" style="font-size:0.875rem;">
+            {{ today.strftime('%A %d/%m/%Y')|capitalize }} —
+            {% if pointage_today and pointage_today.heure_depart %}
+                Journée terminée ({{ pointage_today.heure_arrivee.strftime('%H:%M') }} → {{ pointage_today.heure_depart.strftime('%H:%M') }})
+            {% elif pointage_today %}
+                Arrivée pointée à {{ pointage_today.heure_arrivee.strftime('%H:%M') }}
+            {% else %}
+                Pas encore pointé
+            {% endif %}
+        </p>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+        <div class="export-dropdown">
+            <button class="btn-ghost" onclick="document.getElementById('export-menu').classList.toggle('show')" style="padding:8px 14px;">
+                <svg style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Export CSV
+            </button>
+            <div id="export-menu" class="export-dropdown-content">
+                {% for y, m, label in export_months %}
+                <a href="/pointage/export/{{ y }}/{{ m }}">{{ label }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        <button class="btn-ghost" onclick="document.getElementById('modal-manuel').classList.add('open')" style="padding:8px 14px;">Saisie manuelle</button>
+    </div>
+</div>
+
+<!-- Clock in / Clock out button -->
+<div class="glass" style="padding:24px; margin-bottom:20px; text-align:center;">
+    {% if not pointage_today %}
+    <button id="btn-pointage" class="pointage-btn arrivee" onclick="pointer('arrivee')">
+        <svg style="width:20px; height:20px; display:inline-block; vertical-align:middle; margin-right:8px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Pointer l'arrivée
+    </button>
+    {% elif not pointage_today.heure_depart %}
+    <button id="btn-pointage" class="pointage-btn depart" onclick="pointer('depart')">
+        <svg style="width:20px; height:20px; display:inline-block; vertical-align:middle; margin-right:8px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Pointer le départ
+    </button>
+    {% else %}
+    <p style="font-size:0.9rem;">Journée complète — {{ pointage_today.heures_travaillees or 0 }}h travaillées</p>
+    {% endif %}
+</div>
+
+<!-- Monthly summary -->
+<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
+    <div class="glass" style="padding:16px; text-align:center;">
+        <p class="text-muted" style="font-size:0.75rem; margin-bottom:4px;">Heures théoriques</p>
+        <p style="font-size:1.3rem; font-weight:700;">{{ heures_theoriques }}h</p>
+    </div>
+    <div class="glass" style="padding:16px; text-align:center;">
+        <p class="text-muted" style="font-size:0.75rem; margin-bottom:4px;">Heures réelles</p>
+        <p style="font-size:1.3rem; font-weight:700;">{{ heures_reelles }}h</p>
+    </div>
+    <div class="glass" style="padding:16px; text-align:center;">
+        <p class="text-muted" style="font-size:0.75rem; margin-bottom:4px;">Heures sup</p>
+        <p style="font-size:1.3rem; font-weight:700;">{{ (total_sup_minutes / 60)|round(1) }}h</p>
+    </div>
+    <div class="glass" style="padding:16px; text-align:center;">
+        <p class="text-muted" style="font-size:0.75rem; margin-bottom:4px;">Solde</p>
+        <p style="font-size:1.3rem; font-weight:700; {% if solde >= 0 %}color:#22c55e{% else %}color:#ef4444{% endif %};">
+            {{ '+' if solde > 0 }}{{ solde }}h
+        </p>
+    </div>
+</div>
+
+<!-- Recent pointages table -->
+<div class="glass" style="padding:20px; margin-bottom:24px;">
+    <div class="card-header">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Derniers pointages
+    </div>
+    {% if recent %}
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+            <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                    <th style="text-align:left; padding:8px; font-weight:500;" class="text-muted">Date</th>
+                    <th style="text-align:left; padding:8px; font-weight:500;" class="text-muted">Arrivée</th>
+                    <th style="text-align:left; padding:8px; font-weight:500;" class="text-muted">Départ</th>
+                    <th style="text-align:left; padding:8px; font-weight:500;" class="text-muted">Heures</th>
+                    <th style="text-align:left; padding:8px; font-weight:500;" class="text-muted">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in recent %}
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer;" onclick="fillManuel('{{ p.date }}','{{ p.heure_arrivee.strftime('%H:%M') if p.heure_arrivee else '' }}','{{ p.heure_depart.strftime('%H:%M') if p.heure_depart else '' }}','{{ p.pause_minutes }}','{{ p.notes or '' }}')">
+                    <td style="padding:8px;">{{ p.date.strftime('%d/%m/%Y') }}</td>
+                    <td style="padding:8px;">{{ p.heure_arrivee.strftime('%H:%M') if p.heure_arrivee else '—' }}</td>
+                    <td style="padding:8px;">{{ p.heure_depart.strftime('%H:%M') if p.heure_depart else '—' }}</td>
+                    <td style="padding:8px;">{{ p.heures_travaillees or '—' }}{% if p.heures_travaillees %}h{% endif %}</td>
+                    <td style="padding:8px;" class="text-muted">{{ p.notes or '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <p class="text-muted">Aucun pointage enregistré</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Heures supplémentaires -->
+<div class="glass" style="padding:20px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <div class="card-header" style="margin-bottom:0; padding-bottom:0; border-bottom:none;">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Heures supplémentaires
+        </div>
+        <button class="btn-ghost" onclick="document.getElementById('modal-hs').classList.add('open')">+ Ajouter</button>
+    </div>
+    {% if all_heures_sup %}
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                <th style="text-align:left; padding:8px; font-weight:500;" class="text-muted">Date</th>
+                <th style="text-align:left; padding:8px; font-weight:500;" class="text-muted">Durée</th>
+                <th style="text-align:left; padding:8px; font-weight:500;" class="text-muted">Motif</th>
+                <th style="text-align:left; padding:8px; font-weight:500;" class="text-muted">Validée</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for h in all_heures_sup %}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:8px;">{{ h.date.strftime('%d/%m/%Y') }}</td>
+                <td style="padding:8px;">{{ h.duree_minutes }} min</td>
+                <td style="padding:8px;">{{ h.motif or '—' }}</td>
+                <td style="padding:8px;">
+                    {% if h.validee %}
+                    <span class="badge" style="background:rgba(34,197,94,0.15); color:#22c55e;">Oui</span>
+                    {% else %}
+                    <span class="badge" style="background:rgba(234,179,8,0.15); color:#eab308;">En attente</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted" style="font-size:0.85rem; text-align:center; padding:12px;">Aucune heure supplémentaire enregistrée</p>
+    {% endif %}
+</div>
+
+<!-- Modal: saisie manuelle -->
+<div id="modal-manuel" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 style="font-weight:600;">Saisie manuelle</h2>
+            <button onclick="document.getElementById('modal-manuel').classList.remove('open')" style="background:none; border:none; color:inherit; font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+        <form method="POST" action="/pointage/manuel" style="display:flex; flex-direction:column; gap:12px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Date</label>
+                <input id="manuel-date" name="date" type="date" required class="glass-input" style="width:100%;" value="{{ today }}">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Heure d'arrivée</label>
+                    <input id="manuel-arrivee" name="heure_arrivee" type="time" required class="glass-input" style="width:100%;">
+                </div>
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Heure de départ</label>
+                    <input id="manuel-depart" name="heure_depart" type="time" class="glass-input" style="width:100%;">
+                </div>
+            </div>
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Pause (minutes)</label>
+                <input id="manuel-pause" name="pause_minutes" type="number" min="0" value="60" class="glass-input" style="width:100%;">
+            </div>
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Notes</label>
+                <textarea id="manuel-notes" name="notes" rows="2" class="glass-input" style="width:100%; resize:vertical;"></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Enregistrer</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: heures sup -->
+<div id="modal-hs" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 style="font-weight:600;">Ajouter des heures sup</h2>
+            <button onclick="document.getElementById('modal-hs').classList.remove('open')" style="background:none; border:none; color:inherit; font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+        <form method="POST" action="/pointage/heures-sup/new" style="display:flex; flex-direction:column; gap:12px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Date</label>
+                <input name="date" type="date" required class="glass-input" style="width:100%;" value="{{ today }}">
+            </div>
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Durée (minutes)</label>
+                <input name="duree_minutes" type="number" min="1" required class="glass-input" style="width:100%;">
+            </div>
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Motif</label>
+                <textarea name="motif" rows="2" class="glass-input" style="width:100%; resize:vertical;"></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Ajouter</button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Close export dropdown on outside click
+document.addEventListener('click', function(e) {
+    var menu = document.getElementById('export-menu');
+    if (menu && !e.target.closest('.export-dropdown')) {
+        menu.classList.remove('show');
+    }
+});
+
+// Clock in/out via fetch
+function pointer(type) {
+    var csrf = '{{ csrf_token() }}';
+    fetch('/pointage/' + type, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrf,
+        },
+        body: '{}',
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert(data.error || 'Erreur');
+        }
+    });
+}
+
+// Fill manual form from table row click
+function fillManuel(date, arrivee, depart, pause, notes) {
+    document.getElementById('manuel-date').value = date;
+    document.getElementById('manuel-arrivee').value = arrivee;
+    document.getElementById('manuel-depart').value = depart;
+    document.getElementById('manuel-pause').value = pause;
+    document.getElementById('manuel-notes').value = notes;
+    document.getElementById('modal-manuel').classList.add('open');
+}
+</script>
+{% endblock %}

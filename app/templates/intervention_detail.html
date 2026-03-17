@@ -38,15 +38,24 @@
                     <input name="demandeur" value="{{ i.demandeur }}" class="glass-input" style="width:100%;">
                 </div>
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                 <div>
-                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Type</label>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Type d'intervention</label>
+                    <select name="type_intervention" class="glass-input" style="width:100%;">
+                        <option value="intervention" {% if i.type_intervention == 'intervention' %}selected{% endif %}>Intervention</option>
+                        <option value="mission" {% if i.type_intervention == 'mission' %}selected{% endif %}>Mission</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Type de problème</label>
                     <select name="type_probleme" class="glass-input" style="width:100%;">
                         {% for val, lab in [('reseau','Réseau'),('materiel','Matériel'),('logiciel','Logiciel'),('imprimante','Imprimante'),('autre','Autre')] %}
                         <option value="{{ val }}" {% if i.type_probleme == val %}selected{% endif %}>{{ lab }}</option>
                         {% endfor %}
                     </select>
                 </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                 <div>
                     <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Priorité</label>
                     <select name="priorite" class="glass-input" style="width:100%;">

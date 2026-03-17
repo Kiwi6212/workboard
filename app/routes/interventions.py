@@ -30,6 +30,7 @@ def new():
         lieu=request.form.get("lieu", ""),
         demandeur=request.form.get("demandeur", ""),
         type_probleme=request.form.get("type_probleme", "autre"),
+        type_intervention=request.form.get("type_intervention", "intervention"),
         priorite=request.form.get("priorite", "normal"),
         notes_solution=request.form.get("notes_solution", ""),
         duree_minutes=int(request.form["duree_minutes"]) if request.form.get("duree_minutes") else None,
@@ -77,6 +78,7 @@ def edit(id):
     intervention.lieu = request.form.get("lieu", intervention.lieu)
     intervention.demandeur = request.form.get("demandeur", intervention.demandeur)
     intervention.type_probleme = request.form.get("type_probleme", intervention.type_probleme)
+    intervention.type_intervention = request.form.get("type_intervention", intervention.type_intervention)
     intervention.priorite = request.form.get("priorite", intervention.priorite)
     intervention.notes_solution = request.form.get("notes_solution", intervention.notes_solution)
     intervention.duree_minutes = int(request.form["duree_minutes"]) if request.form.get("duree_minutes") else None
