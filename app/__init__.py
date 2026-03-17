@@ -35,8 +35,8 @@ LOGIN_PASSWORD_HTML = """
         <h1>WorkBoard</h1>
         <p class="sub">Connectez-vous pour continuer</p>
         {% if error %}<div class="error">{{ error }}</div>{% endif %}
-        <form method="POST" action="/login-password">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <form method="POST">
+
             <label>Nom d'utilisateur</label>
             <input name="username" type="text" required autofocus>
             <label>Mot de passe</label>
@@ -92,6 +92,7 @@ def create_app():
         return "<h1>WorkBoard — Login</h1><p>Append <code>?token=YOUR_TOKEN</code> to this URL.</p>", 401
 
     @app.route("/login-password", methods=["GET", "POST"])
+    @csrf.exempt
     def login_password():
         # If already authenticated, go to dashboard
         if session.get("authenticated"):

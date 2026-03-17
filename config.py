@@ -13,3 +13,5 @@ class Config:
     UPLOAD_FOLDER = os.path.join(basedir, os.environ.get("UPLOAD_FOLDER", "uploads"))
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10 MB
     ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "docx"}
+    WTF_CSRF_SSL_STRICT = False
+    SESSION_COOKIE_SECURE = False
