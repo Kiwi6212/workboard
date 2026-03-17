@@ -208,3 +208,7 @@ __marimo__/
 
 # WorkBoard
 uploads/
+workboard.db
+trello_export.json
+settings.local.json
+*.db

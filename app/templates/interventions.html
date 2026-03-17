@@ -6,8 +6,7 @@
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,0.5);
-        backdrop-filter: blur(4px);
+        background: rgba(0,0,0,0.6);
         z-index: 100;
         align-items: center;
         justify-content: center;
@@ -15,7 +14,6 @@
     .modal-overlay.open { display: flex; }
     .modal-box {
         background: rgba(30,25,60,0.95);
-        backdrop-filter: blur(20px);
         border: 1px solid rgba(255,255,255,0.1);
         border-radius: 16px;
         padding: 24px;
@@ -26,28 +24,6 @@
         background: rgba(255,255,255,0.95);
         border: 1px solid rgba(0,0,0,0.1);
     }
-    .filter-tab {
-        padding: 6px 16px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        cursor: pointer;
-        border: 1px solid rgba(255,255,255,0.1);
-        background: rgba(255,255,255,0.05);
-        color: inherit;
-        transition: all 0.2s ease;
-    }
-    html.light-mode .filter-tab {
-        border: 1px solid rgba(0,0,0,0.08);
-        background: rgba(255,255,255,0.4);
-    }
-    .filter-tab:hover { background: rgba(255,255,255,0.1); }
-    html.light-mode .filter-tab:hover { background: rgba(0,0,0,0.05); }
-    .filter-tab.active {
-        background: rgba(124,109,232,0.2);
-        color: #a78bfa;
-        border-color: rgba(124,109,232,0.4);
-    }
 </style>
 {% endblock %}
 
@@ -55,13 +31,6 @@
 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
     <h1 style="font-size:1.5rem; font-weight:700;">Interventions</h1>
     <button class="btn-primary" onclick="document.getElementById('modal').classList.add('open')">+ Nouvelle intervention</button>
-</div>
-
-<!-- Filter tabs -->
-<div style="display:flex; gap:8px; margin-bottom:20px;">
-    <button class="filter-tab active" onclick="filterCards('all', this)">Tous</button>
-    <button class="filter-tab" onclick="filterCards('intervention', this)">Interventions</button>
-    <button class="filter-tab" onclick="filterCards('mission', this)">Missions</button>
 </div>
 
 <!-- Modal -->
@@ -78,11 +47,7 @@
                 <input name="lieu" placeholder="Lieu / Salle" class="glass-input">
                 <input name="demandeur" placeholder="Demandeur" class="glass-input">
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
-                <select name="type_intervention" class="glass-input">
-                    <option value="intervention" selected>Intervention</option>
-                    <option value="mission">Mission</option>
-                </select>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                 <select name="type_probleme" class="glass-input">
                     <option value="reseau">Réseau</option>
                     <option value="materiel">Matériel</option>
@@ -110,7 +75,7 @@
         ('Résolu / Non résolu', resolues, '#22c55e', 'rgba(34,197,94,0.15)')
     ] %}
     {% for label, items, color, bg in columns %}
-    <div style="background:rgba(255,255,255,0.08); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.15); border-radius:16px; min-height:400px; padding:16px;">
+    <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:16px; min-height:400px; padding:16px;">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
             <span style="width:8px; height:8px; border-radius:50%; background:{{ color }};"></span>
             <span style="font-size:0.875rem; font-weight:600; color:{{ color }};">{{ label }}</span>
@@ -118,7 +83,7 @@
         </div>
         <div style="display:flex; flex-direction:column; gap:8px;">
             {% for item in items %}
-            <a href="/interventions/{{ item.id }}" class="glass kanban-card" data-type="{{ item.type_intervention }}" style="padding:16px; text-decoration:none; color:inherit; display:block;">
+            <a href="/interventions/{{ item.id }}" class="glass" style="padding:16px; text-decoration:none; color:inherit; display:block;">
                 <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px;">
                     <h3 style="font-size:0.875rem; font-weight:500;">{{ item.titre }}</h3>
                     {% if item.priorite == 'urgent' %}
@@ -140,11 +105,6 @@
                 </div>
                 {% endif %}
                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                    {% if item.type_intervention == 'mission' %}
-                    <span class="badge" style="background:rgba(167,139,250,0.15); color:#a78bfa; font-size:0.7rem;">Mission</span>
-                    {% else %}
-                    <span class="badge" style="background:rgba(59,130,246,0.15); color:#3b82f6; font-size:0.7rem;">Intervention</span>
-                    {% endif %}
                     {% set type_colors = {'reseau':'#3b82f6','materiel':'#f59e0b','logiciel':'#8b5cf6','imprimante':'#06b6d4','autre':'#6b7280'} %}
                     {% set type_labels = {'reseau':'Réseau','materiel':'Matériel','logiciel':'Logiciel','imprimante':'Imprimante','autre':'Autre'} %}
                     <span class="badge" style="background:{{ type_colors[item.type_probleme] }}20; color:{{ type_colors[item.type_probleme] }}; font-size:0.7rem;">{{ type_labels[item.type_probleme] }}</span>
@@ -162,17 +122,4 @@
     {% endfor %}
 </div>
 
-<script>
-function filterCards(type, btn) {
-    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.kanban-card').forEach(card => {
-        if (type === 'all' || card.dataset.type === type) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-}
-</script>
 {% endblock %}
