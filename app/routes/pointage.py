@@ -1,8 +1,11 @@
 import csv
 import io
 from datetime import date, datetime, time, timezone
+from zoneinfo import ZoneInfo
 
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, Response
+
+PARIS_TZ = ZoneInfo("Europe/Paris")
 
 from app import db
 from app.models import Pointage, HeureSup
@@ -83,13 +86,13 @@ def arrivee():
     existing = Pointage.query.filter_by(date=today).first()
     if existing:
         # Already clocked in today — update arrival time
-        existing.heure_arrivee = datetime.now().time().replace(second=0, microsecond=0)
+        existing.heure_arrivee = datetime.now(timezone.utc).astimezone(PARIS_TZ).time().replace(second=0, microsecond=0)
         db.session.commit()
         return jsonify(ok=True, heure=existing.heure_arrivee.strftime("%H:%M"))
 
     pointage = Pointage(
         date=today,
-        heure_arrivee=datetime.now().time().replace(second=0, microsecond=0),
+        heure_arrivee=datetime.now(timezone.utc).astimezone(PARIS_TZ).time().replace(second=0, microsecond=0),
     )
     db.session.add(pointage)
     db.session.commit()
@@ -103,7 +106,7 @@ def depart():
     if not pointage:
         return jsonify(ok=False, error="Aucune arrivée pointée aujourd'hui"), 400
 
-    pointage.heure_depart = datetime.now().time().replace(second=0, microsecond=0)
+    pointage.heure_depart = datetime.now(timezone.utc).astimezone(PARIS_TZ).time().replace(second=0, microsecond=0)
     pointage.calculer_heures()
     db.session.commit()
     return jsonify(
