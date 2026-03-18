@@ -280,6 +280,12 @@
 
     <!-- Main content -->
     <main class="main-content">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+            <div class="glass" style="padding:8px 16px; display:flex; align-items:center; gap:12px; font-size:0.85rem;">
+                <span id="live-date" class="text-muted"></span>
+                <span id="live-time" style="font-weight:600; font-variant-numeric:tabular-nums;"></span>
+            </div>
+        </div>
         {% block content %}{% endblock %}
     </main>
 
@@ -317,6 +323,21 @@
             applyTheme(!isLight);
             localStorage.setItem('theme', !isLight ? 'light' : 'dark');
         });
+    })();
+    </script>
+
+    <script>
+    (function() {
+        var elDate = document.getElementById('live-date');
+        var elTime = document.getElementById('live-time');
+        function updateClock() {
+            var now = new Date();
+            elDate.textContent = now.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+            elDate.textContent = elDate.textContent.charAt(0).toUpperCase() + elDate.textContent.slice(1);
+            elTime.textContent = now.toLocaleTimeString('fr-FR');
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
     })();
     </script>
 </body>
