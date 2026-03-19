@@ -43,8 +43,14 @@
 
                 <!-- Timer -->
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:0.75rem;">
-                    <span class="text-muted" id="time-{{ t.id }}">{{ '%02d:%02d:%02d' | format(t.temps_passe_sec // 3600, (t.temps_passe_sec % 3600) // 60, t.temps_passe_sec % 60) }}</span>
-                    <button onclick="toggleTimer({{ t.id }})" id="btn-{{ t.id }}" class="btn-ghost">Start</button>
+                    <span class="text-muted" id="time-{{ t.id }}">
+                        {% set extra = (((now_ts - t.timer_start.timestamp()) | int) if t.timer_running and t.timer_start else 0) %}
+                        {% set total = t.temps_passe_sec + extra %}
+                        {{ '%02d:%02d:%02d' | format(total // 3600, (total % 3600) // 60, total % 60) }}
+                    </span>
+                    <button onclick="toggleTimer({{ t.id }}, this)" id="btn-{{ t.id }}" class="btn-ghost">
+                        {{ 'Stop' if t.timer_running else 'Start' }}
+                    </button>
                 </div>
 
                 <!-- Status change -->
@@ -75,34 +81,65 @@
 <script>
 const timers = {};
 
-function toggleTimer(id) {
-    const btn = document.getElementById('btn-' + id);
+function fmtTime(sec) {
+    const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    return h + ':' + m + ':' + s;
+}
+
+// On page load: resume display for any running timers
+{% for col_tasks in [todo, in_progress, done] %}
+{% for t in col_tasks %}
+{% if t.timer_running and t.timer_start %}
+(function() {
+    const id = {{ t.id }};
+    const serverStartTs = {{ t.timer_start.timestamp() }};
+    const nowTs = {{ now_ts }};
+    const alreadyElapsed = Math.max(0, Math.floor(nowTs - serverStartTs));
+    const base = {{ t.temps_passe_sec }} + alreadyElapsed;
+    const display = document.getElementById('time-' + id);
+    const origin = Date.now();
+    timers[id] = {
+        base: base,
+        interval: setInterval(() => {
+            display.textContent = fmtTime(base + Math.floor((Date.now() - origin) / 1000));
+        }, 1000)
+    };
+})();
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+function toggleTimer(id, btnEl) {
     if (timers[id]) {
-        clearInterval(timers[id].interval);
-        const elapsed = Math.floor((Date.now() - timers[id].start) / 1000);
-        fetch('/tasks/timer/' + id, {
+        // Stop
+        fetch('/tasks/' + id + '/timer/stop', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({seconds: elapsed})
+            headers: {'Content-Type': 'application/json'}
+        }).then(r => r.json()).then(data => {
+            clearInterval(timers[id].interval);
+            delete timers[id];
+            document.getElementById('time-' + id).textContent = fmtTime(data.temps_passe_sec);
+            btnEl.textContent = 'Start';
         });
-        delete timers[id];
-        btn.textContent = 'Start';
     } else {
-        const display = document.getElementById('time-' + id);
-        const parts = display.textContent.split(':').map(Number);
-        let base = parts[0] * 3600 + parts[1] * 60 + parts[2];
-        const startTime = Date.now();
-        timers[id] = {
-            start: startTime,
-            interval: setInterval(() => {
-                const sec = base + Math.floor((Date.now() - startTime) / 1000);
-                const h = String(Math.floor(sec / 3600)).padStart(2, '0');
-                const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
-                const s = String(sec % 60).padStart(2, '0');
-                display.textContent = h + ':' + m + ':' + s;
-            }, 1000)
-        };
-        btn.textContent = 'Stop';
+        // Start
+        fetch('/tasks/' + id + '/timer/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        }).then(r => r.json()).then(data => {
+            const base = data.temps_passe_sec;
+            const display = document.getElementById('time-' + id);
+            const origin = Date.now();
+            timers[id] = {
+                base: base,
+                interval: setInterval(() => {
+                    display.textContent = fmtTime(base + Math.floor((Date.now() - origin) / 1000));
+                }, 1000)
+            };
+            btnEl.textContent = 'Stop';
+        });
     }
 }
 </script>

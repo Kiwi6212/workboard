@@ -13,7 +13,8 @@ def index():
     todo = Task.query.filter_by(statut="todo").order_by(Task.priorite.desc()).all()
     in_progress = Task.query.filter_by(statut="in_progress").order_by(Task.priorite.desc()).all()
     done = Task.query.filter_by(statut="done").order_by(Task.priorite.desc()).all()
-    return render_template("tasks.html", todo=todo, in_progress=in_progress, done=done)
+    now_ts = datetime.now(timezone.utc).timestamp()
+    return render_template("tasks.html", todo=todo, in_progress=in_progress, done=done, now_ts=now_ts)
 
 
 @bp.route("/add", methods=["POST"])
@@ -47,6 +48,7 @@ def delete(task_id):
 @bp.route("/timer/<int:task_id>", methods=["POST"])
 @csrf.exempt
 def timer(task_id):
+    """Legacy timer endpoint — kept for backwards compat."""
     task = Task.query.get_or_404(task_id)
     data = request.get_json()
     seconds = int(data.get("seconds", 0))
@@ -56,10 +58,61 @@ def timer(task_id):
     return jsonify(temps_passe_sec=task.temps_passe_sec)
 
 
+@bp.route("/<int:task_id>/timer/start", methods=["POST"])
+@csrf.exempt
+def timer_start(task_id):
+    task = Task.query.get_or_404(task_id)
+    if not task.timer_running:
+        task.timer_running = True
+        task.timer_start = datetime.now(timezone.utc)
+        db.session.commit()
+    return jsonify(ok=True, temps_passe_sec=task.temps_passe_sec,
+                   timer_start=task.timer_start.timestamp())
+
+
+@bp.route("/<int:task_id>/timer/stop", methods=["POST"])
+@csrf.exempt
+def timer_stop(task_id):
+    task = Task.query.get_or_404(task_id)
+    if task.timer_running and task.timer_start:
+        elapsed = int((datetime.now(timezone.utc) - task.timer_start).total_seconds())
+        task.temps_passe_sec += max(elapsed, 0)
+        task.timer_running = False
+        task.timer_start = None
+        db.session.commit()
+    return jsonify(ok=True, temps_passe_sec=task.temps_passe_sec)
+
+
+@bp.route("/<int:task_id>/timer/add", methods=["POST"])
+@csrf.exempt
+def timer_add(task_id):
+    task = Task.query.get_or_404(task_id)
+    data = request.get_json()
+    hours = int(data.get("hours", 0))
+    minutes = int(data.get("minutes", 0))
+    seconds_to_add = hours * 3600 + minutes * 60
+    if seconds_to_add > 0:
+        task.temps_passe_sec += seconds_to_add
+        db.session.commit()
+    return jsonify(ok=True, temps_passe_sec=task.temps_passe_sec)
+
+
+@bp.route("/<int:task_id>/timer/reset", methods=["POST"])
+@csrf.exempt
+def timer_reset(task_id):
+    task = Task.query.get_or_404(task_id)
+    task.temps_passe_sec = 0
+    task.timer_running = False
+    task.timer_start = None
+    db.session.commit()
+    return jsonify(ok=True, temps_passe_sec=0)
+
+
 @bp.route("/<int:task_id>")
 def detail(task_id):
     task = Task.query.get_or_404(task_id)
-    return render_template("task_detail.html", t=task)
+    now_ts = datetime.now(timezone.utc).timestamp()
+    return render_template("task_detail.html", t=task, now_ts=now_ts)
 
 
 @bp.route("/<int:task_id>/edit", methods=["POST"])

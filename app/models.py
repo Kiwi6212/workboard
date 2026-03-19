@@ -22,6 +22,8 @@ class Task(db.Model):
     statut = db.Column(db.String(20), nullable=False, default="todo")  # todo, in_progress, done
     priorite = db.Column(db.Integer, default=0)
     temps_passe_sec = db.Column(db.Integer, default=0)
+    timer_running = db.Column(db.Boolean, default=False)
+    timer_start = db.Column(db.DateTime, nullable=True)
     date_creation = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 

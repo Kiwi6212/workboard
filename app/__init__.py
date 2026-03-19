@@ -146,5 +146,16 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # Migrate: add timer columns to tasks if missing
+        import sqlite3 as _sql
+        _conn = db.engine.raw_connection()
+        _cur = _conn.cursor()
+        _cols = [r[1] for r in _cur.execute("PRAGMA table_info(tasks)").fetchall()]
+        if "timer_running" not in _cols:
+            _cur.execute("ALTER TABLE tasks ADD COLUMN timer_running BOOLEAN DEFAULT 0")
+        if "timer_start" not in _cols:
+            _cur.execute("ALTER TABLE tasks ADD COLUMN timer_start DATETIME")
+        _conn.commit()
+        _conn.close()
 
     return app
