@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ t.titre }} — Tâches — WorkBoard{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+    <a href="/tasks/" class="btn-ghost" style="text-decoration:none; padding:8px 16px;">&larr; Retour</a>
+    <h1 style="font-size:1.5rem; font-weight:700;">{{ t.titre }}</h1>
+    <span class="badge" style="background:rgba(255,255,255,0.08); font-size:0.75rem;">P{{ t.priorite }}</span>
+    {% set statut_colors = {'todo':'#eab308','in_progress':'#a78bfa','done':'#22c55e'} %}
+    {% set statut_labels = {'todo':'À faire','in_progress':'En cours','done':'Terminé'} %}
+    <span class="badge" style="background:{{ statut_colors[t.statut] }}20; color:{{ statut_colors[t.statut] }};">{{ statut_labels[t.statut] }}</span>
+</div>
+
+<div style="display:grid; grid-template-columns:2fr 1fr; gap:20px;">
+    <!-- Edit form -->
+    <div class="glass" style="padding:24px;">
+        <div class="card-header">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            Modifier la tâche
+        </div>
+        <form method="POST" action="/tasks/{{ t.id }}/edit" style="display:flex; flex-direction:column; gap:12px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Titre</label>
+                <input name="titre" value="{{ t.titre }}" required class="glass-input" style="width:100%;">
+            </div>
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Description</label>
+                <textarea name="description" rows="4" class="glass-input" style="width:100%; resize:vertical;">{{ t.description or '' }}</textarea>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Statut</label>
+                    <select name="statut" class="glass-input" style="width:100%;">
+                        {% for val, lab in [('todo','À faire'),('in_progress','En cours'),('done','Terminé')] %}
+                        <option value="{{ val }}" {% if t.statut == val %}selected{% endif %}>{{ lab }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Priorité</label>
+                    <input name="priorite" type="number" min="0" max="10" value="{{ t.priorite }}" class="glass-input" style="width:100%;">
+                </div>
+            </div>
+            <button type="submit" class="btn-primary" style="align-self:flex-start;">Sauvegarder</button>
+        </form>
+    </div>
+
+    <!-- Side panel -->
+    <div style="display:flex; flex-direction:column; gap:16px;">
+        <!-- Timer -->
+        <div class="glass" style="padding:20px;">
+            <div class="card-header">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Chronomètre
+            </div>
+            <div style="text-align:center; margin-bottom:12px;">
+                <span id="timer-display" style="font-size:2rem; font-weight:700; font-variant-numeric:tabular-nums;">
+                    {{ '%02d:%02d:%02d' | format(t.temps_passe_sec // 3600, (t.temps_passe_sec % 3600) // 60, t.temps_passe_sec % 60) }}
+                </span>
+            </div>
+            <button id="timer-btn" onclick="toggleTimer()" class="btn-primary" style="width:100%; padding:10px;">Start</button>
+        </div>
+
+        <!-- Info -->
+        <div class="glass" style="padding:20px;">
+            <div class="card-header">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Informations
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
+                <div>
+                    <span class="text-muted">Créée le :</span>
+                    <span>{{ t.date_creation.strftime('%d/%m/%Y à %H:%M') }}</span>
+                </div>
+                <div>
+                    <span class="text-muted">Temps passé :</span>
+                    <span>{{ t.temps_passe_sec // 3600 }}h {{ '%02d' | format((t.temps_passe_sec % 3600) // 60) }}min</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete -->
+        <div class="glass" style="padding:20px;">
+            <form method="POST" action="/tasks/{{ t.id }}/delete" onsubmit="return confirm('Supprimer cette tâche ?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button style="width:100%; padding:8px; border-radius:10px; border:1px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.1); color:#ef4444; font-size:0.875rem; cursor:pointer;">Supprimer la tâche</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const taskId = {{ t.id }};
+let timerRunning = false;
+let timerInterval = null;
+let startTime = null;
+let baseSec = {{ t.temps_passe_sec }};
+
+function updateDisplay(sec) {
+    const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    document.getElementById('timer-display').textContent = h + ':' + m + ':' + s;
+}
+
+function toggleTimer() {
+    const btn = document.getElementById('timer-btn');
+    if (timerRunning) {
+        clearInterval(timerInterval);
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        fetch('/tasks/' + taskId + '/timer', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({seconds: elapsed})
+        }).then(r => r.json()).then(data => {
+            baseSec = data.temps_passe_sec;
+            updateDisplay(baseSec);
+        });
+        timerRunning = false;
+        btn.textContent = 'Start';
+    } else {
+        startTime = Date.now();
+        timerInterval = setInterval(() => {
+            const sec = baseSec + Math.floor((Date.now() - startTime) / 1000);
+            updateDisplay(sec);
+        }, 1000);
+        timerRunning = true;
+        btn.textContent = 'Stop';
+    }
+}
+</script>
+{% endblock %}

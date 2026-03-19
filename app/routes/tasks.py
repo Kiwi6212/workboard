@@ -54,3 +54,28 @@ def timer(task_id):
         task.temps_passe_sec += seconds
         db.session.commit()
     return jsonify(temps_passe_sec=task.temps_passe_sec)
+
+
+@bp.route("/<int:task_id>")
+def detail(task_id):
+    task = Task.query.get_or_404(task_id)
+    return render_template("task_detail.html", t=task)
+
+
+@bp.route("/<int:task_id>/edit", methods=["POST"])
+def edit(task_id):
+    task = Task.query.get_or_404(task_id)
+    task.titre = request.form["titre"]
+    task.description = request.form.get("description", "")
+    task.statut = request.form.get("statut", task.statut)
+    task.priorite = int(request.form.get("priorite", task.priorite))
+    db.session.commit()
+    return redirect(url_for("tasks.detail", task_id=task.id))
+
+
+@bp.route("/<int:task_id>/delete", methods=["POST"])
+def delete_detail(task_id):
+    task = Task.query.get_or_404(task_id)
+    db.session.delete(task)
+    db.session.commit()
+    return redirect(url_for("tasks.index"))

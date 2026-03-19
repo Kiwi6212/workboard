@@ -31,13 +31,15 @@
         <div style="display:flex; flex-direction:column; gap:8px;">
             {% for t in tasks %}
             <div class="glass" style="padding:16px;">
-                <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px;">
+                <a href="/tasks/{{ t.id }}" style="text-decoration:none; color:inherit; display:block; margin-bottom:8px;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between;">
                     <h3 style="font-size:0.875rem; font-weight:500;">{{ t.titre }}</h3>
                     <span class="badge" style="background:rgba(255,255,255,0.08); font-size:0.7rem;">P{{ t.priorite }}</span>
                 </div>
                 {% if t.description %}
-                <p class="text-muted" style="font-size:0.75rem; margin-bottom:12px;">{{ t.description }}</p>
+                <p class="text-muted" style="font-size:0.75rem; margin-bottom:0;">{{ t.description }}</p>
                 {% endif %}
+                </a>
 
                 <!-- Timer -->
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:0.75rem;">
