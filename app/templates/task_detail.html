@@ -109,23 +109,38 @@
 {% block scripts %}
 <script>
 const taskId = {{ t.id }};
+const csrfToken = '{{ csrf_token() }}';
 let timerRunning = {{ 'true' if t.timer_running else 'false' }};
 let timerInterval = null;
 let baseSec = {{ t.temps_passe_sec }};
 
-function updateDisplay(sec) {
+function fmtHMS(sec) {
     const h = String(Math.floor(sec / 3600)).padStart(2, '0');
     const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
     const s = String(sec % 60).padStart(2, '0');
-    document.getElementById('timer-display').textContent = h + ':' + m + ':' + s;
+    return h + ':' + m + ':' + s;
+}
+
+function updateTimerDisplay(sec) {
+    document.getElementById('timer-display').textContent = fmtHMS(sec);
+}
+
+function updateInfoTemps(sec) {
     document.getElementById('info-temps').textContent =
         Math.floor(sec / 3600) + 'h ' + String(Math.floor((sec % 3600) / 60)).padStart(2, '0') + 'min';
+}
+
+function updateDisplay(sec) {
+    updateTimerDisplay(sec);
+    updateInfoTemps(sec);
 }
 
 function startDisplayTimer(fromSec) {
     const origin = Date.now();
     timerInterval = setInterval(() => {
-        updateDisplay(fromSec + Math.floor((Date.now() - origin) / 1000));
+        const current = fromSec + Math.floor((Date.now() - origin) / 1000);
+        updateTimerDisplay(current);
+        updateInfoTemps(current);
     }, 1000);
 }
 
@@ -143,26 +158,39 @@ function startDisplayTimer(fromSec) {
 {% endif %}
 
 function toggleTimer() {
+    console.log('toggleTimer called, timerRunning:', timerRunning);
     const btn = document.getElementById('timer-btn');
     if (timerRunning) {
-        fetch('/tasks/' + taskId + '/timer/stop', { method: 'POST',
-            headers: {'Content-Type': 'application/json'}
-        }).then(r => r.json()).then(data => {
+        fetch('/tasks/' + taskId + '/timer/stop', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken}
+        }).then(r => {
+            if (!r.ok) throw new Error('Stop request failed: ' + r.status);
+            return r.json();
+        }).then(data => {
+            console.log('Stop response:', data);
             clearInterval(timerInterval);
+            timerInterval = null;
             baseSec = data.temps_passe_sec;
-            updateDisplay(baseSec);
+            updateTimerDisplay(0);
+            updateInfoTemps(baseSec);
             timerRunning = false;
             btn.textContent = 'Start';
-        });
+        }).catch(err => console.error('Stop timer error:', err));
     } else {
-        fetch('/tasks/' + taskId + '/timer/start', { method: 'POST',
-            headers: {'Content-Type': 'application/json'}
-        }).then(r => r.json()).then(data => {
+        fetch('/tasks/' + taskId + '/timer/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken}
+        }).then(r => {
+            if (!r.ok) throw new Error('Start request failed: ' + r.status);
+            return r.json();
+        }).then(data => {
+            console.log('Start response:', data);
             baseSec = data.temps_passe_sec;
             startDisplayTimer(baseSec);
             timerRunning = true;
             btn.textContent = 'Stop';
-        });
+        }).catch(err => console.error('Start timer error:', err));
     }
 }
 
@@ -172,28 +200,35 @@ function addManualTime() {
     if (hours === 0 && minutes === 0) return;
     fetch('/tasks/' + taskId + '/timer/add', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
         body: JSON.stringify({hours: hours, minutes: minutes})
-    }).then(r => r.json()).then(data => {
+    }).then(r => {
+        if (!r.ok) throw new Error('Add time failed: ' + r.status);
+        return r.json();
+    }).then(data => {
         baseSec = data.temps_passe_sec;
         if (!timerRunning) updateDisplay(baseSec);
         document.getElementById('manual-hours').value = 0;
         document.getElementById('manual-minutes').value = 0;
-    });
+    }).catch(err => console.error('Add manual time error:', err));
 }
 
 function resetTimer() {
     if (!confirm('Réinitialiser le chronomètre à zéro ?')) return;
     fetch('/tasks/' + taskId + '/timer/reset', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'}
-    }).then(r => r.json()).then(data => {
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken}
+    }).then(r => {
+        if (!r.ok) throw new Error('Reset failed: ' + r.status);
+        return r.json();
+    }).then(data => {
         clearInterval(timerInterval);
+        timerInterval = null;
         baseSec = 0;
         timerRunning = false;
         updateDisplay(0);
         document.getElementById('timer-btn').textContent = 'Start';
-    });
+    }).catch(err => console.error('Reset timer error:', err));
 }
 </script>
 {% endblock %}
