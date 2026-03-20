@@ -7,10 +7,10 @@
 {% block content %}
 <h1 style="font-size:1.5rem; font-weight:700; margin-bottom:24px;">Dashboard</h1>
 
-<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:20px; margin-bottom:24px;">
+<div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:20px; margin-bottom:24px;">
     <!-- Task summary -->
-    <div class="glass" style="padding:20px; display:flex; flex-direction:column;">
-        <div class="card-header">
+    <div class="glass" style="padding:20px; display:flex; flex-direction:column; overflow:hidden;">
+        <div class="card-header" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
             Tâches
         </div>
@@ -33,8 +33,8 @@
     </div>
 
     <!-- Upcoming events -->
-    <div class="glass" style="padding:20px; display:flex; flex-direction:column;">
-        <div class="card-header">
+    <div class="glass" style="padding:20px; display:flex; flex-direction:column; overflow:hidden;">
+        <div class="card-header" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             Prochains événements
         </div>
@@ -58,8 +58,8 @@
     </div>
 
     <!-- Interventions du mois -->
-    <div class="glass" style="padding:20px; display:flex; flex-direction:column;">
-        <div class="card-header">
+    <div class="glass" style="padding:20px; display:flex; flex-direction:column; overflow:hidden;">
+        <div class="card-header" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
             Interventions du mois
         </div>
@@ -86,8 +86,8 @@
     </div>
 
     <!-- Recent notes -->
-    <div class="glass" style="padding:20px;">
-        <div class="card-header">
+    <div class="glass" style="padding:20px; overflow:hidden;">
+        <div class="card-header" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
             Notes récentes
         </div>
