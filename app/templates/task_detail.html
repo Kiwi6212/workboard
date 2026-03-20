@@ -176,7 +176,7 @@ function toggleTimer() {
             clearInterval(timerInterval);
             timerInterval = null;
             baseSec = data.temps_passe_sec;
-            updateTimerDisplay(0);
+            updateTimerDisplay(baseSec);
             updateInfoTemps(baseSec);
             timerRunning = false;
             btn.textContent = 'Start';
