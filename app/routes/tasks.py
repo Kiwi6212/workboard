@@ -61,26 +61,33 @@ def timer(task_id):
 @bp.route("/<int:task_id>/timer/start", methods=["POST"])
 @csrf.exempt
 def timer_start(task_id):
-    task = Task.query.get_or_404(task_id)
-    if not task.timer_running:
-        task.timer_running = True
-        task.timer_start = datetime.now(timezone.utc)
-        db.session.commit()
-    return jsonify(ok=True, temps_passe_sec=task.temps_passe_sec,
-                   timer_start=task.timer_start.timestamp())
+    try:
+        task = Task.query.get_or_404(task_id)
+        if not task.timer_running:
+            task.timer_running = True
+            task.timer_start = datetime.now(timezone.utc)
+            db.session.commit()
+        ts = task.timer_start.replace(tzinfo=timezone.utc) if task.timer_start else datetime.now(timezone.utc)
+        return jsonify(success=True, temps_passe_sec=task.temps_passe_sec,
+                       timer_start=ts.timestamp())
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @bp.route("/<int:task_id>/timer/stop", methods=["POST"])
 @csrf.exempt
 def timer_stop(task_id):
-    task = Task.query.get_or_404(task_id)
-    if task.timer_running and task.timer_start:
-        elapsed = int((datetime.now(timezone.utc) - task.timer_start).total_seconds())
-        task.temps_passe_sec += max(elapsed, 0)
-        task.timer_running = False
-        task.timer_start = None
-        db.session.commit()
-    return jsonify(success=True, temps_passe_sec=task.temps_passe_sec)
+    try:
+        task = Task.query.get_or_404(task_id)
+        if task.timer_running and task.timer_start:
+            elapsed = (datetime.now(timezone.utc) - task.timer_start.replace(tzinfo=timezone.utc)).total_seconds()
+            task.temps_passe_sec = int(task.temps_passe_sec or 0) + int(elapsed)
+            task.timer_running = False
+            task.timer_start = None
+            db.session.commit()
+        return jsonify({"success": True, "temps_passe_sec": task.temps_passe_sec})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @bp.route("/<int:task_id>/timer/add", methods=["POST"])
