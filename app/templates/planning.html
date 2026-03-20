@@ -1,60 +1,389 @@
 {% extends "base.html" %}
 {% block title %}Planning — WorkBoard{% endblock %}
 
+{% block head %}
+<style>
+    .planning-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 0; }
+    .hour-label {
+        font-size: 0.7rem;
+        color: rgba(255,255,255,0.35);
+        text-align: right;
+        padding-right: 8px;
+        height: 50px;
+        line-height: 50px;
+        border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    html.light-mode .hour-label { color: rgba(30,41,59,0.4); border-top-color: rgba(0,0,0,0.06); }
+
+    .day-col {
+        position: relative;
+        border-left: 1px solid rgba(255,255,255,0.06);
+    }
+    html.light-mode .day-col { border-left-color: rgba(0,0,0,0.06); }
+
+    .hour-row {
+        height: 50px;
+        border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    html.light-mode .hour-row { border-top-color: rgba(0,0,0,0.06); }
+
+    .ev-block {
+        position: absolute;
+        left: 2px; right: 2px;
+        border-radius: 8px;
+        padding: 3px 6px;
+        font-size: 0.7rem;
+        overflow: hidden;
+        z-index: 2;
+        cursor: default;
+        border-left: 3px solid var(--ev-color);
+        min-height: 18px;
+    }
+    .ev-block .ev-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ev-block .ev-time { opacity: 0.7; font-size: 0.65rem; white-space: nowrap; }
+
+    .multiday-bar {
+        border-radius: 6px;
+        padding: 2px 8px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .now-line {
+        position: absolute;
+        left: 0; right: 0;
+        height: 2px;
+        background: #ef4444;
+        z-index: 10;
+        pointer-events: none;
+    }
+    .now-line::before {
+        content: '';
+        position: absolute;
+        left: -4px; top: -3px;
+        width: 8px; height: 8px;
+        background: #ef4444;
+        border-radius: 50%;
+    }
+
+    /* Day header */
+    .day-header {
+        text-align: center;
+        padding: 8px 4px;
+        border-left: 1px solid rgba(255,255,255,0.06);
+    }
+    html.light-mode .day-header { border-left-color: rgba(0,0,0,0.06); }
+    .day-header .day-name { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .day-header .day-num { font-size: 1.1rem; font-weight: 700; }
+    .day-header.today .day-num {
+        background: #7c6de8;
+        color: #fff;
+        width: 30px; height: 30px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Month view */
+    .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; }
+    .month-cell {
+        min-height: 90px;
+        padding: 6px;
+        border: 1px solid rgba(255,255,255,0.06);
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    html.light-mode .month-cell { border-color: rgba(0,0,0,0.06); }
+    .month-cell:hover { background: rgba(124,109,232,0.08); }
+    .month-cell.outside { opacity: 0.35; }
+    .month-cell .mc-day { font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
+    .month-cell.today .mc-day span {
+        background: #7c6de8;
+        color: #fff;
+        width: 24px; height: 24px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+    }
+    .ev-pill {
+        border-radius: 4px;
+        padding: 1px 6px;
+        font-size: 0.65rem;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .mc-overflow { font-size: 0.6rem; color: rgba(255,255,255,0.4); }
+    html.light-mode .mc-overflow { color: rgba(30,41,59,0.45); }
+
+    /* Modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+        background: rgba(30,27,60,0.98);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 16px;
+        padding: 28px;
+        width: 480px;
+        max-width: 92vw;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    html.light-mode .modal-box {
+        background: rgba(245,245,255,0.98);
+        border-color: rgba(0,0,0,0.1);
+    }
+
+    /* View toggle */
+    .view-toggle {
+        display: inline-flex;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    html.light-mode .view-toggle { border-color: rgba(0,0,0,0.1); }
+    .view-toggle a {
+        padding: 6px 14px;
+        font-size: 0.8rem;
+        text-decoration: none;
+        color: inherit;
+        font-weight: 500;
+    }
+    .view-toggle a.active {
+        background: #7c6de8;
+        color: #fff;
+    }
+    .view-toggle a:not(.active):hover { background: rgba(255,255,255,0.06); }
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+<!-- Header -->
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
     <h1 style="font-size:1.5rem; font-weight:700;">Planning</h1>
-    <div style="display:flex; align-items:center; gap:12px;">
-        <a href="?week={{ prev_week }}" class="btn-ghost">&larr; Sem. préc.</a>
-        <span class="text-muted" style="font-size:0.875rem;">Semaine du {{ start.strftime('%d/%m/%Y') }}</span>
-        <a href="?week={{ next_week }}" class="btn-ghost" style="text-decoration:none;">Sem. suiv. &rarr;</a>
+
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        {% if view == 'week' %}
+        <a href="?week={{ prev_week }}" class="btn-ghost" style="text-decoration:none;">&larr;</a>
+        <span class="text-muted" style="font-size:0.85rem;">Semaine du {{ start.strftime('%d/%m/%Y') }}</span>
+        <a href="?week={{ next_week }}" class="btn-ghost" style="text-decoration:none;">&rarr;</a>
+        {% else %}
+        <a href="?view=month&month={{ prev_month }}" class="btn-ghost" style="text-decoration:none;">&larr;</a>
+        <span class="text-muted" style="font-size:0.85rem;">{{ month_name }} {{ year }}</span>
+        <a href="?view=month&month={{ next_month }}" class="btn-ghost" style="text-decoration:none;">&rarr;</a>
+        {% endif %}
+
+        <div class="view-toggle">
+            <a href="?view=week{% if view == 'week' %}&week={{ start.strftime('%Y-%m-%d') }}{% endif %}" class="{% if view == 'week' %}active{% endif %}">Semaine</a>
+            <a href="?view=month" class="{% if view == 'month' %}active{% endif %}">Mois</a>
+        </div>
+
+        <button onclick="document.getElementById('event-modal').classList.add('active')" class="btn-primary" style="font-size:0.8rem;">+ Événement</button>
     </div>
 </div>
 
-<!-- Add event form -->
-<details class="glass" style="margin-bottom:24px;">
-    <summary style="color:inherit;">+ Ajouter un événement</summary>
-    <form method="POST" action="/planning/add" style="padding:20px; display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input name="titre" placeholder="Titre" required class="glass-input">
-        <input name="description" placeholder="Description" class="glass-input">
-        <select name="type" class="glass-input">
-            <option value="cours">Cours</option>
-            <option value="tache">Tâche</option>
-            <option value="perso">Perso</option>
-            <option value="alternance">Alternance</option>
-        </select>
-        <input name="date_debut" type="datetime-local" required class="glass-input">
-        <input name="date_fin" type="datetime-local" required class="glass-input">
-        <input name="couleur" type="color" value="#7c6de8" class="glass-input" style="height:40px; width:64px;">
-        <div style="grid-column:span 3;">
-            <button type="submit" class="btn-primary">Ajouter</button>
+{% if view == 'week' %}
+<!-- ============ WEEK VIEW ============ -->
+<div class="glass" style="padding:12px; overflow-x:auto;">
+    <!-- Day headers -->
+    <div style="display:grid; grid-template-columns:50px repeat(7,1fr); gap:0;">
+        <div></div>
+        {% set day_names = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'] %}
+        {% for day, _ in days %}
+        {% set is_today = day.date() == now.date() %}
+        <div class="day-header {% if is_today %}today{% endif %}">
+            <div class="day-name text-muted">{{ day_names[loop.index0] }}</div>
+            <div class="day-num">{{ day.strftime('%d') }}</div>
         </div>
-    </form>
-</details>
+        {% endfor %}
+    </div>
 
-<!-- Weekly grid -->
-<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:8px;">
-    {% set day_names = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'] %}
-    {% for day, events in days %}
-    <div class="glass" style="min-height:200px; overflow:hidden;">
-        <div style="padding:10px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.08);">
-            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em;">{{ day_names[loop.index0] }}</div>
-            <div style="font-size:1.25rem; font-weight:700;">{{ day.strftime('%d') }}</div>
-        </div>
-        <div style="padding:6px; display:flex; flex-direction:column; gap:4px;">
-            {% for e in events %}
-            <div style="border-radius:10px; padding:6px 8px; font-size:0.75rem; background:{{ e.couleur }}15; border-left:3px solid {{ e.couleur }};">
-                <div style="font-weight:500; color:{{ e.couleur }};">{{ e.titre }}</div>
-                <div class="text-muted" style="font-size:0.7rem;">{{ e.date_debut.strftime('%H:%M') }}</div>
-                <form method="POST" action="/planning/delete/{{ e.id }}" style="margin-top:4px;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button style="font-size:0.7rem; color:#f87171; background:none; border:none; cursor:pointer;">&times; Suppr.</button>
-                </form>
+    <!-- Multi-day events bar area -->
+    {% set ns = namespace(has_multiday=false) %}
+    {% for day, devents in days %}
+        {% for de in devents %}
+            {% if de.is_multiday %}{% set ns.has_multiday = true %}{% endif %}
+        {% endfor %}
+    {% endfor %}
+    {% if ns.has_multiday %}
+    <div style="display:grid; grid-template-columns:50px repeat(7,1fr); gap:0; margin-bottom:4px;">
+        <div></div>
+        {% for day, devents in days %}
+        <div style="padding:2px 2px; border-left:1px solid rgba(255,255,255,0.06);">
+            {% for de in devents %}
+            {% if de.is_multiday %}
+            <div class="multiday-bar" style="background:{{ de.color }}25; color:{{ de.color }}; border-left:3px solid {{ de.color }};">
+                {% if not de.is_first_day %}&larr; {% endif %}{{ de.event.titre }}{% if not de.is_last_day %} &rarr;{% endif %}
             </div>
+            {% endif %}
             {% endfor %}
         </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Hourly grid -->
+    <div class="planning-grid">
+        {% for h in range(7, 21) %}
+        <!-- Hour label -->
+        <div class="hour-label">{{ '%02d' | format(h) }}:00</div>
+        <!-- Day columns for this hour -->
+        {% for day, devents in days %}
+        <div class="hour-row" style="position:relative;
+            {% if loop.first and h == 7 %}border-left:1px solid rgba(255,255,255,0.06);{% endif %}
+            border-left:1px solid rgba(255,255,255,0.06);">
+            {% if h == 7 %}
+            <!-- Events positioned absolutely in this column (rendered once at h==7) -->
+            {% for de in devents %}
+            {% if not de.is_multiday %}
+            {% set top_h = [de.start_hour, 7] | max %}
+            {% set bot_h = [de.end_hour, 20] | min %}
+            {% set top_px = (top_h - 7) * 50 %}
+            {% set height_px = [(bot_h - top_h) * 50, 18] | max %}
+            <div class="ev-block" style="--ev-color:{{ de.color }}; background:{{ de.color }}18; top:{{ top_px }}px; height:{{ height_px }}px;">
+                <div class="ev-title" style="color:{{ de.color }};">{{ de.event.titre }}</div>
+                {% if height_px >= 30 %}
+                <div class="ev-time">{{ de.event.date_debut.strftime('%H:%M') }} — {{ de.event.date_fin.strftime('%H:%M') }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endfor %}
+
+            <!-- Current time line -->
+            {% set is_today = day.date() == now.date() %}
+            {% if is_today and now.hour >= 7 and now.hour < 20 %}
+            {% set now_px = (now.hour + now.minute / 60 - 7) * 50 %}
+            <div class="now-line" style="top:{{ now_px }}px;"></div>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+{% else %}
+<!-- ============ MONTH VIEW ============ -->
+<div class="glass" style="padding:12px;">
+    <!-- Day-of-week headers -->
+    <div class="month-grid" style="margin-bottom:4px;">
+        {% set day_names = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'] %}
+        {% for dn in day_names %}
+        <div style="text-align:center; padding:6px; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em;" class="text-muted">{{ dn }}</div>
+        {% endfor %}
+    </div>
+
+    {% for week in weeks %}
+    <div class="month-grid">
+        {% for cell in week %}
+        {% set today = cell.date == now.date() if now is defined else false %}
+        <a href="?view=week&week={{ cell.week_start }}"
+           class="month-cell {% if not cell.in_month %}outside{% endif %} {% if today %}today{% endif %}"
+           style="text-decoration:none; color:inherit;">
+            <div class="mc-day"><span>{{ cell.date.day }}</span></div>
+            {% for ev in cell.events %}
+            <div class="ev-pill" style="background:{{ ev.color }}25; color:{{ ev.color }};">{{ ev.event.titre }}</div>
+            {% endfor %}
+            {% if cell.overflow > 0 %}
+            <div class="mc-overflow">+{{ cell.overflow }} de plus</div>
+            {% endif %}
+        </a>
+        {% endfor %}
     </div>
     {% endfor %}
 </div>
+{% endif %}
+
+<!-- ============ ADD EVENT MODAL ============ -->
+<div class="modal-overlay" id="event-modal">
+    <div class="modal-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="font-size:1.1rem; font-weight:700;">Nouvel événement</h2>
+            <button onclick="document.getElementById('event-modal').classList.remove('active')" style="background:none; border:none; color:inherit; font-size:1.4rem; cursor:pointer; padding:4px 8px;">&times;</button>
+        </div>
+        <form method="POST" action="/planning/add" style="display:flex; flex-direction:column; gap:12px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Titre</label>
+                <input name="titre" placeholder="Titre de l'événement" required class="glass-input" style="width:100%;">
+            </div>
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Description</label>
+                <input name="description" placeholder="Description (optionnel)" class="glass-input" style="width:100%;">
+            </div>
+            <div>
+                <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Type</label>
+                <select name="type" id="event-type-select" class="glass-input" style="width:100%;" onchange="updateTypePreview()">
+                    <option value="cours">Cours</option>
+                    <option value="alternance">Alternance</option>
+                    <option value="tache" selected>Tâche</option>
+                    <option value="perso">Perso</option>
+                </select>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Début</label>
+                    <input name="date_debut" type="datetime-local" required class="glass-input" style="width:100%;">
+                </div>
+                <div>
+                    <label class="text-muted" style="font-size:0.75rem; display:block; margin-bottom:4px;">Fin</label>
+                    <input name="date_fin" type="datetime-local" required class="glass-input" style="width:100%;">
+                </div>
+            </div>
+            <div id="type-preview" style="border-radius:8px; padding:8px 12px; font-size:0.8rem; font-weight:500; margin-top:4px;"></div>
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
+                <button type="button" onclick="document.getElementById('event-modal').classList.remove('active')" class="btn-ghost">Annuler</button>
+                <button type="submit" class="btn-primary">Ajouter</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TYPE_COLORS = {
+    cours: '#4A90D9',
+    alternance: '#7c6de8',
+    tache: '#F5A623',
+    perso: '#27AE60'
+};
+
+function updateTypePreview() {
+    const sel = document.getElementById('event-type-select');
+    const preview = document.getElementById('type-preview');
+    const color = TYPE_COLORS[sel.value] || '#7c6de8';
+    preview.style.background = color + '20';
+    preview.style.color = color;
+    preview.style.borderLeft = '3px solid ' + color;
+    preview.textContent = sel.options[sel.selectedIndex].text;
+}
+updateTypePreview();
+
+// Close modal on overlay click
+document.getElementById('event-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('active');
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') document.getElementById('event-modal').classList.remove('active');
+});
+</script>
 {% endblock %}
