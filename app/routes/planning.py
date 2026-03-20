@@ -16,6 +16,13 @@ TYPE_COLORS = {
 }
 
 
+def _naive(dt):
+    """Strip timezone info from a datetime so all comparisons are naive."""
+    if dt and dt.tzinfo:
+        return dt.replace(tzinfo=None)
+    return dt
+
+
 @bp.route("/")
 def index():
     view = request.args.get("view", "week")
@@ -29,11 +36,11 @@ def _week_view():
     week_str = request.args.get("week")
     if week_str:
         try:
-            start = datetime.strptime(week_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            start = datetime.strptime(week_str, "%Y-%m-%d")
         except ValueError:
-            start = _monday(datetime.now(timezone.utc))
+            start = _monday(datetime.now())
     else:
-        start = _monday(datetime.now(timezone.utc))
+        start = _monday(datetime.now())
 
     end = start + timedelta(days=7)
 
@@ -49,14 +56,16 @@ def _week_view():
         day_end = day_start + timedelta(days=1)
         day_events = []
         for e in events:
-            if e.date_debut < day_end and e.date_fin >= day_start:
+            ev_debut = _naive(e.date_debut)
+            ev_fin = _naive(e.date_fin)
+            if ev_debut < day_end and ev_fin >= day_start:
                 color = TYPE_COLORS.get(e.type, e.couleur)
-                is_multiday = e.date_debut.date() != e.date_fin.date()
-                is_first_day = e.date_debut.date() == day_start.date()
-                is_last_day = e.date_fin.date() == day_start.date()
+                is_multiday = ev_debut.date() != ev_fin.date()
+                is_first_day = ev_debut.date() == day_start.date()
+                is_last_day = ev_fin.date() == day_start.date()
                 # Clamp times to this day
-                ev_start = max(e.date_debut, day_start)
-                ev_end = min(e.date_fin, day_end)
+                ev_start = max(ev_debut, day_start)
+                ev_end = min(ev_fin, day_end)
                 day_events.append({
                     "event": e,
                     "color": color,
@@ -70,7 +79,7 @@ def _week_view():
 
     prev_week = (start - timedelta(days=7)).strftime("%Y-%m-%d")
     next_week = (start + timedelta(days=7)).strftime("%Y-%m-%d")
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
 
     return render_template(
         "planning.html",
@@ -90,10 +99,10 @@ def _month_view():
         try:
             year, month = int(month_str[:4]), int(month_str[5:7])
         except (ValueError, IndexError):
-            today = datetime.now(timezone.utc)
+            today = datetime.now()
             year, month = today.year, today.month
     else:
-        today = datetime.now(timezone.utc)
+        today = datetime.now()
         year, month = today.year, today.month
 
     first_day = date(year, month, 1)
@@ -104,8 +113,8 @@ def _month_view():
     # 6 weeks grid
     grid_end = grid_start + timedelta(days=42)
 
-    dt_start = datetime(grid_start.year, grid_start.month, grid_start.day, tzinfo=timezone.utc)
-    dt_end = datetime(grid_end.year, grid_end.month, grid_end.day, tzinfo=timezone.utc)
+    dt_start = datetime(grid_start.year, grid_start.month, grid_start.day)
+    dt_end = datetime(grid_end.year, grid_end.month, grid_end.day)
 
     events = Event.query.filter(
         Event.date_debut < dt_end,
@@ -117,11 +126,13 @@ def _month_view():
         week = []
         for d in range(7):
             day = grid_start + timedelta(days=w * 7 + d)
-            day_dt_start = datetime(day.year, day.month, day.day, tzinfo=timezone.utc)
+            day_dt_start = datetime(day.year, day.month, day.day)
             day_dt_end = day_dt_start + timedelta(days=1)
             day_events = []
             for e in events:
-                if e.date_debut < day_dt_end and e.date_fin >= day_dt_start:
+                ev_debut = _naive(e.date_debut)
+                ev_fin = _naive(e.date_fin)
+                if ev_debut < day_dt_end and ev_fin >= day_dt_start:
                     color = TYPE_COLORS.get(e.type, e.couleur)
                     day_events.append({"event": e, "color": color})
             week.append({
@@ -143,6 +154,8 @@ def _month_view():
     next_m = month + 1 if month < 12 else 1
     next_y = year if month < 12 else year + 1
 
+    now = datetime.now()
+
     return render_template(
         "planning.html",
         view="month",
@@ -156,8 +169,8 @@ def _month_view():
         days=[],
         prev_week="",
         next_week="",
-        start=datetime.now(timezone.utc),
-        now=datetime.now(timezone.utc),
+        start=now,
+        now=now,
     )
 
 
