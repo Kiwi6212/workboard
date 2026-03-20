@@ -80,7 +80,9 @@
 {% block scripts %}
 <script>
 const timers = {};
-const csrfToken = '{{ csrf_token() }}';
+const csrfToken = document.cookie.split(';').find(c => c.trim().startsWith('csrf_token='))?.split('=')[1]
+    || document.querySelector('[name=csrf-token]')?.content
+    || document.querySelector('input[name=csrf_token]')?.value;
 
 function fmtTime(sec) {
     const h = String(Math.floor(sec / 3600)).padStart(2, '0');

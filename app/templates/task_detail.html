@@ -109,7 +109,10 @@
 {% block scripts %}
 <script>
 const taskId = {{ t.id }};
-const csrfToken = '{{ csrf_token() }}';
+const csrfToken = document.cookie.split(';').find(c => c.trim().startsWith('csrf_token='))?.split('=')[1]
+    || document.querySelector('[name=csrf-token]')?.content
+    || document.querySelector('input[name=csrf_token]')?.value;
+console.log('CSRF token:', csrfToken);
 let timerRunning = {{ 'true' if t.timer_running else 'false' }};
 let timerInterval = null;
 let baseSec = {{ t.temps_passe_sec }};
@@ -161,6 +164,7 @@ function toggleTimer() {
     console.log('toggleTimer called, timerRunning:', timerRunning);
     const btn = document.getElementById('timer-btn');
     if (timerRunning) {
+        console.log('Stop clicked');
         fetch('/tasks/' + taskId + '/timer/stop', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken}

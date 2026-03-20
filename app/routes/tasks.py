@@ -80,7 +80,7 @@ def timer_stop(task_id):
         task.timer_running = False
         task.timer_start = None
         db.session.commit()
-    return jsonify(ok=True, temps_passe_sec=task.temps_passe_sec)
+    return jsonify(success=True, temps_passe_sec=task.temps_passe_sec)
 
 
 @bp.route("/<int:task_id>/timer/add", methods=["POST"])
