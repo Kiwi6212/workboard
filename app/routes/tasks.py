@@ -65,9 +65,9 @@ def timer_start(task_id):
         task = Task.query.get_or_404(task_id)
         if not task.timer_running:
             task.timer_running = True
-            task.timer_start = datetime.now(timezone.utc)
+            task.timer_start = datetime.now()
             db.session.commit()
-        ts = task.timer_start.replace(tzinfo=timezone.utc) if task.timer_start else datetime.now(timezone.utc)
+        ts = task.timer_start if task.timer_start else datetime.now()
         return jsonify(success=True, temps_passe_sec=task.temps_passe_sec,
                        timer_start=ts.timestamp())
     except Exception as e:
@@ -80,7 +80,7 @@ def timer_stop(task_id):
     try:
         task = Task.query.get_or_404(task_id)
         if task.timer_running and task.timer_start:
-            elapsed = (datetime.now(timezone.utc) - task.timer_start.replace(tzinfo=timezone.utc)).total_seconds()
+            elapsed = (datetime.now() - task.timer_start.replace(tzinfo=None)).total_seconds()
             task.temps_passe_sec = int(task.temps_passe_sec or 0) + int(elapsed)
             task.timer_running = False
             task.timer_start = None
