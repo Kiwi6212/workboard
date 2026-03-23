@@ -13,7 +13,7 @@ def index():
     todo = Task.query.filter_by(statut="todo").order_by(Task.priorite.desc()).all()
     in_progress = Task.query.filter_by(statut="in_progress").order_by(Task.priorite.desc()).all()
     done = Task.query.filter_by(statut="done").order_by(Task.priorite.desc()).all()
-    now_ts = datetime.now(timezone.utc).timestamp()
+    now_ts = datetime.now().timestamp()
     return render_template("tasks.html", todo=todo, in_progress=in_progress, done=done, now_ts=now_ts)
 
 
@@ -118,7 +118,7 @@ def timer_reset(task_id):
 @bp.route("/<int:task_id>")
 def detail(task_id):
     task = Task.query.get_or_404(task_id)
-    now_ts = datetime.now(timezone.utc).timestamp()
+    now_ts = datetime.now().timestamp()
     return render_template("task_detail.html", t=task, now_ts=now_ts)
 
 
