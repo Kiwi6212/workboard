@@ -1,0 +1,956 @@
+"""
+
+WorkBoard MCP Server — Expose WorkBoard a Claude.ai via MCP.
+
+Read + Write tools.
+
+"""
+
+import os
+
+import json
+
+import httpx
+
+from mcp.server.fastmcp import FastMCP
+
+from mcp.server.transport_security import TransportSecuritySettings
+
+
+WORKBOARD_API_BASE = "http://127.0.0.1:8081"
+
+MCP_API_TOKEN = os.environ.get("MCP_API_TOKEN", "")
+WORKBOARD_TOKEN = os.environ.get("WORKBOARD_TOKEN", "")
+
+
+mcp = FastMCP(
+
+    "WorkBoard",
+
+    host="127.0.0.1",
+
+    port=8086,
+
+    transport_security=TransportSecuritySettings(
+
+        enable_dns_rebinding_protection=True,
+
+        allowed_hosts=["mcp.myjobhunter.fr", "127.0.0.1", "127.0.0.1:8086", "localhost"],
+
+    ),
+
+)
+
+
+
+async def _get(endpoint: str) -> dict:
+
+    async with httpx.AsyncClient() as client:
+
+        resp = await client.get(
+
+            f"{WORKBOARD_API_BASE}{endpoint}",
+
+            headers={"Authorization": f"Bearer {WORKBOARD_TOKEN}"},
+
+            timeout=10,
+
+        )
+
+        resp.raise_for_status()
+
+        return resp.json()
+
+
+
+async def _post(endpoint: str, data: dict = None) -> dict:
+
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+
+        # Routes /api attendent du JSON, routes web du form-encoded
+        kwargs = {}
+        if endpoint.startswith("/api"):
+            kwargs["json"] = data or {}
+        else:
+            kwargs["data"] = data or {}
+
+        resp = await client.post(
+
+            f"{WORKBOARD_API_BASE}{endpoint}",
+
+            headers={
+
+                "Authorization": f"Bearer {WORKBOARD_TOKEN}",
+
+
+            },
+
+            **kwargs,
+
+            timeout=10,
+
+        )
+
+        resp.raise_for_status()
+
+        try:
+            return resp.json()
+        except Exception:
+            return {"success": True, "status_code": resp.status_code}
+
+
+
+# ==================== STATS (read-only) ====================
+
+@mcp.tool()
+
+async def get_dashboard_overview() -> str:
+
+    """
+
+    interventions du mois (total/urgent/resolues), taux de resolution global,
+
+    temps moyen de resolution, et pointage du jour.
+
+    """
+
+    data = await _get("/api/dashboard")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def get_interventions_stats() -> str:
+
+    """
+
+    Recupere les statistiques detaillees des interventions IT.
+
+    Inclut : repartition par type de probleme (reseau, materiel, logiciel,
+
+    imprimante, autre), repartition par statut, et tendance sur 6 mois.
+
+    """
+
+    data = await _get("/api/stats/interventions")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def get_tasks_stats() -> str:
+
+    """
+
+    Recupere les statistiques des taches completees par semaine
+
+    sur les 4 dernieres semaines.
+
+    """
+
+    data = await _get("/api/stats/tasks")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def get_goals_progress() -> str:
+
+    """
+
+    Recupere la progression de tous les objectifs et KPIs definis.
+
+    Pour chaque objectif : titre, valeur actuelle vs cible, pourcentage, echeance.
+
+    """
+
+    data = await _get("/api/stats/goals")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def get_pointage_stats() -> str:
+
+    """
+
+    Recupere les statistiques de pointage pour le mois en cours.
+
+    Inclut : jours travailles, heures theoriques vs reelles, heures sup, solde.
+
+    """
+
+    data = await _get("/api/stats/pointage")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+# ==================== LISTES (read-only) ====================
+
+
+@mcp.tool()
+
+async def get_interventions_list(statut: str = "", type_probleme: str = "") -> str:
+
+    """
+
+    Recupere la liste des interventions IT (kanban).
+
+    Filtres optionnels :
+
+    - statut : en_attente, en_cours, resolu, non_resolu
+
+    - type_probleme : reseau, materiel, logiciel, imprimante, autre
+
+    Retourne jusqu a 50 interventions avec details complets.
+
+    """
+
+    params = []
+
+    if statut:
+
+        params.append(f"statut={statut}")
+
+    if type_probleme:
+
+        params.append(f"type={type_probleme}")
+
+    qs = "?" + "&".join(params) if params else ""
+
+    data = await _get(f"/api/interventions{qs}")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def get_tasks_list(statut: str = "") -> str:
+
+    """
+
+    Recupere la liste des taches.
+
+    Filtre optionnel : statut (todo, in_progress, done).
+
+    Retourne jusqu a 50 taches avec titre, description, priorite, temps passe.
+
+    """
+
+    qs = f"?statut={statut}" if statut else ""
+
+    data = await _get(f"/api/tasks{qs}")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def get_planning(scope: str = "upcoming") -> str:
+
+    """
+
+    Recupere les evenements du planning/agenda.
+
+    Scope : upcoming (a venir), past (passes), all (tous).
+
+    """
+
+    data = await _get(f"/api/planning?scope={scope}")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def get_notes() -> str:
+
+    """
+
+    Recupere les 20 dernieres notes markdown.
+
+    Pour chaque note : titre, contenu markdown, dates de creation et modification.
+
+    """
+
+    data = await _get("/api/notes")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def get_documents() -> str:
+
+    """
+
+    Recupere la liste des documents stockes (bulletins, contrats, cours, etc.).
+
+    """
+
+    data = await _get("/api/documents")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def get_pointage_historique() -> str:
+
+    """
+
+    Recupere les 30 derniers pointages (historique detaille).
+
+    Pour chaque jour : heure arrivee, heure depart, pause, heures travaillees, notes.
+
+    """
+
+    data = await _get("/api/pointage/historique")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def get_heures_sup() -> str:
+
+    """
+
+    Recupere la liste des 20 dernieres heures supplementaires.
+
+    """
+
+    data = await _get("/api/heures-sup")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+# ==================== ÉCRITURE — POINTAGE ====================
+
+
+@mcp.tool()
+
+async def pointer_arrivee() -> str:
+
+    """
+
+    Enregistre le pointage d arrivee pour aujourd hui (heure actuelle, fuseau Paris).
+
+    Si deja pointe, met a jour l heure d arrivee.
+
+    """
+
+    data = await _post("/pointage/arrivee")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def pointer_depart() -> str:
+
+    """
+
+    Enregistre le pointage de depart pour aujourd hui (heure actuelle, fuseau Paris).
+
+    Calcule automatiquement les heures travaillees.
+
+    Erreur si aucune arrivee n a ete pointee.
+
+    """
+
+    data = await _post("/pointage/depart")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def pointage_manuel(date_str: str, heure_arrivee: str, heure_depart: str = "", pause_minutes: int = 60, notes: str = "") -> str:
+
+    """
+
+    Ajoute ou modifie un pointage manuellement (rattrapage).
+
+    - date_str : format YYYY-MM-DD
+
+    - heure_arrivee : format HH:MM
+
+    - heure_depart : format HH:MM (optionnel)
+
+    - pause_minutes : duree de pause en minutes (defaut 60)
+
+    - notes : commentaire optionnel
+
+    """
+
+    data = await _post("/pointage/manuel", {
+
+        "date": date_str,
+
+        "heure_arrivee": heure_arrivee,
+
+        "heure_depart": heure_depart or None,
+
+        "pause_minutes": pause_minutes,
+
+        "notes": notes,
+
+    })
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def declarer_heures_sup(date_str: str, duree_minutes: int, motif: str = "") -> str:
+
+    """
+
+    Declare des heures supplementaires.
+
+    - date_str : format YYYY-MM-DD
+
+    - duree_minutes : duree en minutes
+
+    - motif : raison des heures sup
+
+    """
+
+    data = await _post("/pointage/heures-sup/new", {
+
+        "date": date_str,
+
+        "duree_minutes": duree_minutes,
+
+        "motif": motif,
+
+    })
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+# ==================== ÉCRITURE — INTERVENTIONS ====================
+
+
+@mcp.tool()
+
+async def creer_intervention(titre: str, type_probleme: str = "autre", lieu: str = "", demandeur: str = "", priorite: str = "normal", notes_solution: str = "", duree_minutes: int = 0) -> str:
+
+    """
+
+    Cree une nouvelle intervention IT.
+
+    - titre : description du probleme (obligatoire)
+
+    - type_probleme : reseau, materiel, logiciel, imprimante, autre
+
+    - lieu : salle/batiment
+
+    - demandeur : nom de la personne qui signale
+
+    - priorite : normal ou urgent
+
+    - notes_solution : notes initiales
+
+    - duree_minutes : duree estimee
+
+    """
+
+    payload = {
+
+        "titre": titre,
+
+        "type_probleme": type_probleme,
+
+        "lieu": lieu,
+
+        "demandeur": demandeur,
+
+        "priorite": priorite,
+
+        "notes_solution": notes_solution,
+
+    }
+
+    if duree_minutes:
+
+        payload["duree_minutes"] = duree_minutes
+
+    data = await _post("/interventions/new", payload)
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def changer_statut_intervention(intervention_id: int, statut: str, notes_solution: str = "", duree_minutes: int = 0) -> str:
+
+    """
+
+    Change le statut d une intervention.
+
+    - intervention_id : ID de l intervention
+
+    - statut : en_attente, en_cours, resolu, non_resolu
+
+    - notes_solution : notes a ajouter (optionnel)
+
+    - duree_minutes : duree de l intervention (optionnel, pour resolution)
+
+    """
+
+    payload = {"statut": statut}
+
+    if notes_solution:
+
+        payload["notes_solution"] = notes_solution
+
+    if duree_minutes:
+
+        payload["duree_minutes"] = duree_minutes
+
+    data = await _post(f"/api/interventions/{intervention_id}/statut", payload)
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def modifier_intervention(intervention_id: int, titre: str = "", lieu: str = "", demandeur: str = "", type_probleme: str = "", notes_solution: str = "") -> str:
+
+    """
+
+    Modifie les champs d une intervention existante.
+
+    Seuls les champs fournis (non vides) seront mis a jour.
+
+    """
+
+    payload = {}
+
+    if titre:
+
+        payload["titre"] = titre
+
+    if lieu:
+
+        payload["lieu"] = lieu
+
+    if demandeur:
+
+        payload["demandeur"] = demandeur
+
+    if type_probleme:
+
+        payload["type_probleme"] = type_probleme
+
+    if notes_solution:
+
+        payload["notes_solution"] = notes_solution
+
+    if not payload:
+
+        return json.dumps({"error": "Aucun champ a modifier"})
+
+    data = await _put(f"/api/interventions/{intervention_id}", payload)
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+# ==================== ÉCRITURE — TÂCHES ====================
+
+
+@mcp.tool()
+
+async def creer_tache(titre: str, description: str = "", priorite: int = 0) -> str:
+
+    """
+
+    Cree une nouvelle tache.
+
+    - titre : nom de la tache (obligatoire)
+
+    - description : details
+
+    - priorite : 0 (normale) ou plus (haute)
+
+    """
+
+    data = await _post("/tasks/add", {
+
+        "titre": titre,
+
+        "description": description,
+
+        "priorite": priorite,
+
+    })
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def changer_statut_tache(task_id: int, statut: str) -> str:
+
+    """
+
+    Change le statut d une tache.
+
+    - task_id : ID de la tache
+
+    - statut : todo, in_progress, done
+
+    """
+
+    data = await _post(f"/api/tasks/{task_id}/statut", {"statut": statut})
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def controler_timer_tache(task_id: int, action: str) -> str:
+
+    """
+
+    Demarre ou arrete le timer d une tache.
+
+    - task_id : ID de la tache
+
+    - action : start ou stop
+
+    """
+
+    data = await _post(f"/api/tasks/{task_id}/timer", {"action": action})
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+# ==================== ÉCRITURE — PLANNING ====================
+
+
+@mcp.tool()
+
+async def creer_evenement(titre: str, date_debut: str, date_fin: str, type_event: str = "tache", description: str = "", couleur: str = "#3b82f6") -> str:
+
+    """
+
+    Cree un nouvel evenement dans le planning.
+
+    - titre : nom de l evenement (obligatoire)
+
+    - date_debut : format ISO (YYYY-MM-DDTHH:MM:SS)
+
+    - date_fin : format ISO (YYYY-MM-DDTHH:MM:SS)
+
+    - type_event : cours, tache, perso, alternance
+
+    - description : details
+
+    - couleur : code hex (#3b82f6 par defaut)
+
+    """
+
+    data = await _post("/planning/add", {
+
+        "titre": titre,
+
+        "date_debut": date_debut,
+
+        "date_fin": date_fin,
+
+        "type": type_event,
+
+        "description": description,
+
+        "couleur": couleur,
+
+    })
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def supprimer_evenement(event_id: int) -> str:
+
+    """
+
+    Supprime un evenement du planning.
+
+    - event_id : ID de l evenement
+
+    """
+
+    data = await _post(f"/api/planning/{event_id}/delete")
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+# ==================== ÉCRITURE — NOTES ====================
+
+
+@mcp.tool()
+
+async def creer_note(titre: str, contenu_md: str = "") -> str:
+
+    """
+
+    Cree une nouvelle note markdown.
+
+    - titre : titre de la note (obligatoire)
+
+    - contenu_md : contenu en markdown
+
+    """
+
+    data = await _post("/notes/new", {
+
+        "titre": titre,
+
+        "contenu_md": contenu_md,
+
+    })
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def modifier_note(note_id: int, titre: str = "", contenu_md: str = "") -> str:
+
+    """
+
+    Modifie une note existante.
+
+    Seuls les champs fournis (non vides) seront mis a jour.
+
+    """
+
+    payload = {}
+
+    if titre:
+
+        payload["titre"] = titre
+
+    if contenu_md:
+
+        payload["contenu_md"] = contenu_md
+
+    if not payload:
+
+        return json.dumps({"error": "Aucun champ a modifier"})
+
+    data = await _put(f"/api/notes/{note_id}", payload)
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+# ==================== ÉCRITURE — GOALS ====================
+
+
+@mcp.tool()
+
+async def creer_objectif(titre: str, valeur_cible: float = 100, unite: str = "%", description: str = "", date_echeance: str = "") -> str:
+
+    """
+
+    Cree un nouvel objectif/KPI.
+
+    - titre : nom de l objectif (obligatoire)
+
+    - valeur_cible : valeur a atteindre (defaut 100)
+
+    - unite : unite de mesure (defaut %)
+
+    - description : details
+
+    - date_echeance : format ISO (optionnel)
+
+    """
+
+    payload = {
+
+        "titre": titre,
+
+        "valeur_cible": valeur_cible,
+
+        "unite": unite,
+
+        "description": description,
+
+    }
+
+    if date_echeance:
+
+        payload["date_echeance"] = date_echeance
+
+    data = await _post("/goals/add", payload)
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+@mcp.tool()
+
+async def mettre_a_jour_objectif(goal_id: int, valeur_actuelle: float) -> str:
+
+    """
+
+    Met a jour la progression d un objectif.
+
+    - goal_id : ID de l objectif
+
+    - valeur_actuelle : nouvelle valeur
+
+    """
+
+    data = await _post(f"/api/goals/{goal_id}/update", {"valeur_actuelle": valeur_actuelle})
+
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+
+
+async def _delete(endpoint: str) -> dict:
+
+    async with httpx.AsyncClient() as client:
+
+        resp = await client.delete(
+
+            f"{WORKBOARD_API_BASE}{endpoint}",
+
+            headers={"Authorization": f"Bearer {WORKBOARD_TOKEN}"},
+
+        )
+
+        return resp.json()
+
+
+
+async def _put(endpoint: str, data: dict = None) -> dict:
+
+    async with httpx.AsyncClient() as client:
+
+        resp = await client.put(
+
+            f"{WORKBOARD_API_BASE}{endpoint}",
+
+            json=data or {},
+
+            headers={"Authorization": f"Bearer {WORKBOARD_TOKEN}"},
+
+        )
+
+        return resp.json()
+
+
+
+@mcp.tool()
+async def supprimer_note(note_id: int) -> dict:
+
+    """Supprimer une note par son ID"""
+
+    return await _delete(f"/api/notes/{note_id}")
+
+
+
+@mcp.tool()
+async def supprimer_intervention(intervention_id: int) -> dict:
+
+    """Supprimer une intervention par son ID"""
+
+    return await _delete(f"/api/interventions/{intervention_id}")
+
+
+
+@mcp.tool()
+async def supprimer_tache(tache_id: int) -> dict:
+
+    """Supprimer une tâche par son ID"""
+
+    return await _delete(f"/api/tasks/{tache_id}")
+
+
+
+@mcp.tool()
+async def modifier_tache(tache_id: int, titre: str = None, description: str = None, statut: str = None, priorite: int = None) -> dict:
+
+    """Modifier une tâche (titre, description, statut: todo/in_progress/done, priorite)"""
+
+    data = {}
+
+    if titre is not None: data["titre"] = titre
+
+    if description is not None: data["description"] = description
+
+    if statut is not None: data["statut"] = statut
+
+    if priorite is not None: data["priorite"] = priorite
+
+    return await _put(f"/api/tasks/{tache_id}", data)
+
+
+
+@mcp.tool()
+async def ajouter_temps_tache(tache_id: int, heures: int = 0, minutes: int = 0) -> dict:
+
+    """Ajouter du temps manuellement au chrono d une tâche"""
+
+    secondes = heures * 3600 + minutes * 60
+
+    return await _post(f"/api/tasks/{tache_id}/timer/add", {"secondes": secondes})
+
+
+
+@mcp.tool()
+
+async def get_dashboard_stats() -> dict:
+
+    """Resume du matin : interventions du jour, taches en cours, chrono actif, pointage"""
+
+    return await _get("/api/dashboard")
+
+
+
+
+
+
+if __name__ == "__main__":
+
+    mcp.run(transport="sse")
+
+
+
