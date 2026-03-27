@@ -325,13 +325,13 @@ def control_task_timer(task_id):
     task = Task.query.get_or_404(task_id)
     data = request.get_json() or request.form
     action = data.get('action')
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
     if action == 'start':
         task.timer_running = True
         task.timer_start = now
     elif action == 'stop':
         if task.timer_running and task.timer_start:
-            elapsed = (now - task.timer_start).total_seconds()
+            elapsed = (now - task.timer_start.replace(tzinfo=None)).total_seconds()
             task.temps_passe_sec = (task.temps_passe_sec or 0) + int(elapsed)
         task.timer_running = False
         task.timer_start = None
